@@ -1,0 +1,17 @@
+export const routes = {
+  home: "/",
+  login: "/login",
+  register: "/registro",
+  forgotPassword: "/recuperar-password",
+  app: "/app",
+  dashboard: "/app/dashboard",
+  quotes: "/app/quotes",
+  newQuote: "/app/quotes/new",
+  quoteDetail: (id: string) => `/app/quotes/${id}`,
+  clients: "/app/clients",
+  catalogItems: "/app/catalog/items",
+  catalogCategories: "/app/catalog/categories",
+  reports: "/app/reports",
+  settingsCompany: "/app/settings/company",
+  publicQuote: "/q/demo-token",
+} as const
