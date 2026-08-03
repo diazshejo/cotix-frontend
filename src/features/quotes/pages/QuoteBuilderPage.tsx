@@ -1,11 +1,13 @@
-import { useMutation, useQuery } from "@tanstack/react-query"
-import { Check, Copy, Download, Plus, Save, Search, Send, Trash2 } from "lucide-react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { AlertCircle, Check, Copy, Download, Plus, Save, Search, Send, Trash2 } from "lucide-react"
 import { useMemo, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
-import { getApiErrorMessage } from "@/api/client"
+import { getApiErrorMessage, isPlanRestriction } from "@/api/client"
 import { listCatalogItems } from "@/api/catalog"
 import { listClients } from "@/api/clients"
 import { downloadQuotePdf, saveQuote, sendQuote } from "@/api/quotes"
+import { getCompanySettings } from "@/api/settings"
 import { ErrorState, LoadingState } from "@/components/common/StateBlock"
 import { Button } from "@/components/ui/Button"
 import { Card, CardContent, CardHeader } from "@/components/ui/Card"
@@ -13,6 +15,7 @@ import { FieldError, TextareaField } from "@/components/ui/Form"
 import { Modal } from "@/components/ui/Modal"
 import { useConfirm } from "@/components/common/ConfirmDialog"
 import { queryKeys } from "@/constants/queryKeys"
+import { routes } from "@/constants/routes"
 import { useDebounce } from "@/hooks/useDebounce"
 import { useAuthStore } from "@/stores/authStore"
 import type { CatalogItem } from "@/types/catalog"
@@ -32,6 +35,7 @@ function normalizePercentInput(value: string) {
 }
 
 export default function QuoteBuilderPage() {
+  const navigate = useNavigate()
   const [clientName, setClientName] = useState("")
   const [clientEmail, setClientEmail] = useState("")
   const [clientId, setClientId] = useState("")
@@ -39,12 +43,15 @@ export default function QuoteBuilderPage() {
   const [issueDate, setIssueDate] = useState(today)
   const [validUntil, setValidUntil] = useState(defaultValidUntil)
   const [notes, setNotes] = useState("Los precios estan sujetos a disponibilidad. Esta cotizacion es valida por el tiempo indicado.")
+  const [termsConditions, setTermsConditions] = useState("")
   const [items, setItems] = useState<QuoteItem[]>([])
   const [savedQuote, setSavedQuote] = useState<Quote | null>(null)
   const [catalogOpen, setCatalogOpen] = useState(false)
   const [catalogSearch, setCatalogSearch] = useState("")
   const [validationError, setValidationError] = useState("")
+  const [planLimitHit, setPlanLimitHit] = useState(false)
   const role = useAuthStore((state) => state.user?.role)
+  const queryClient = useQueryClient()
   const canEdit = canPerform(role, "edit")
   const canSend = canPerform(role, "sendQuote")
   const canDownload = canPerform(role, "downloadPdf")
@@ -52,6 +59,11 @@ export default function QuoteBuilderPage() {
   const confirm = useConfirm()
   const debouncedCatalogSearch = useDebounce(catalogSearch)
 
+  const settingsQuery = useQuery({
+    queryKey: queryKeys.companySettings,
+    queryFn: getCompanySettings,
+    staleTime: 5 * 60 * 1000,
+  })
   const clientsQuery = useQuery({
     queryKey: queryKeys.clients(""),
     queryFn: () => listClients(""),
@@ -77,7 +89,7 @@ export default function QuoteBuilderPage() {
     currency: "GTQ",
     publicToken: savedQuote?.publicToken,
     notes,
-    termsConditions: "Esta cotizacion es valida hasta la fecha indicada.",
+    termsConditions,
   }
 
   const saveMutation = useMutation({
@@ -85,8 +97,15 @@ export default function QuoteBuilderPage() {
     onSuccess: (quote) => {
       setSavedQuote(quote)
       toast.success("Borrador guardado.")
+      void queryClient.invalidateQueries({ queryKey: queryKeys.planUsage })
     },
-    onError: (error) => toast.error(getApiErrorMessage(error)),
+    onError: (error) => {
+      if (isPlanRestriction(error)) {
+        setPlanLimitHit(true)
+      } else {
+        toast.error(getApiErrorMessage(error))
+      }
+    },
   })
   const sendMutation = useMutation({
     mutationFn: sendQuote,
@@ -111,7 +130,7 @@ export default function QuoteBuilderPage() {
   })
 
   function validateQuote() {
-    const result = quoteSchema.safeParse({ clientId, clientName, title, issueDate, validUntil, items, notes })
+    const result = quoteSchema.safeParse({ clientId, clientName, title, issueDate, validUntil, items, notes, termsConditions })
     if (!result.success) {
       setValidationError(result.error.issues[0]?.message ?? "Revisa la cotizacion.")
       return false
@@ -173,7 +192,7 @@ export default function QuoteBuilderPage() {
   }
 
   return (
-    <div className="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_480px]">
+    <div className="grid gap-6 pb-32 lg:pb-0 2xl:grid-cols-[minmax(0,1fr)_480px]">
       <section className="space-y-5">
         <Card>
           <CardHeader>
@@ -224,7 +243,7 @@ export default function QuoteBuilderPage() {
             </label>
             <label>
               <span className="label">Valida hasta</span>
-              <input className="field mt-2" type="date" value={validUntil} onChange={(event) => setValidUntil(event.target.value)} />
+              <input className="field mt-2" type="date" min={issueDate} value={validUntil} onChange={(event) => setValidUntil(event.target.value)} />
             </label>
           </CardContent>
         </Card>
@@ -304,8 +323,9 @@ export default function QuoteBuilderPage() {
             <p className="label">Notas y terminos</p>
             <h3 className="mt-1 text-lg font-bold">Texto para el cliente</h3>
           </CardHeader>
-          <CardContent>
-            <TextareaField label="Notas visibles" disabled={!canEdit} value={notes} onChange={(event) => setNotes(event.target.value)} />
+          <CardContent className="space-y-4">
+            <TextareaField label="Notas visibles al cliente" disabled={!canEdit} value={notes} onChange={(event) => setNotes(event.target.value)} />
+            <TextareaField label="Terminos y condiciones" disabled={!canEdit} value={termsConditions} onChange={(event) => setTermsConditions(event.target.value)} />
           </CardContent>
         </Card>
       </section>
@@ -328,10 +348,14 @@ export default function QuoteBuilderPage() {
             <div className="rounded-lg border border-border bg-white p-5 shadow-soft">
               <div className="flex items-start justify-between border-b border-border pb-5">
                 <div>
-                  <p className="text-xl font-bold">Distribuidora Garcia</p>
-                  <p className="mt-1 text-sm text-muted-foreground">ventas@distribuidoragarcia.gt</p>
+                  <p className="text-xl font-bold">{settingsQuery.data?.tradeName || settingsQuery.data?.businessName || "Tu empresa"}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{settingsQuery.data?.email || ""}</p>
                 </div>
-                <div className="rounded-md bg-primary px-3 py-2 text-sm font-bold text-white">COTIX</div>
+                {settingsQuery.data?.logoUrl ? (
+                  <img src={settingsQuery.data.logoUrl} alt="Logo" className="h-10 max-w-[120px] object-contain" />
+                ) : (
+                  <div className="rounded-md bg-primary px-3 py-2 text-sm font-bold text-white">{settingsQuery.data?.quotePrefix || "COT"}</div>
+                )}
               </div>
               <div className="py-5">
                 <p className="label">Para</p>
@@ -358,6 +382,35 @@ export default function QuoteBuilderPage() {
           </CardContent>
         </Card>
       </aside>
+
+      <Modal
+        open={planLimitHit}
+        title="Limite de cotizaciones alcanzado"
+        description="Has llegado al maximo de cotizaciones permitidas por tu plan este mes."
+        onClose={() => setPlanLimitHit(false)}
+      >
+        <div className="space-y-5">
+          <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+            <div className="text-sm text-amber-800">
+              <p className="font-semibold">Plan Basico — 50 cotizaciones / mes</p>
+              <p className="mt-1 leading-5">Ya usaste las 50 cotizaciones disponibles este mes. Podras crear nuevas cotizaciones el proximo mes o actualizando tu plan.</p>
+            </div>
+          </div>
+          <div className="rounded-lg border border-border p-4">
+            <p className="text-sm font-semibold">Plan Pro — $15/mes</p>
+            <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+              <li>• Cotizaciones ilimitadas cada mes</li>
+              <li>• Hasta 3 usuarios en tu equipo</li>
+              <li>• Integraciones con APIs externas de catalogo</li>
+            </ul>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" onClick={() => setPlanLimitHit(false)}>Cerrar</Button>
+            <Button type="button" onClick={() => navigate(routes.settingsBilling)}>Actualizar plan</Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal open={catalogOpen} title="Agregar desde catalogo" description="Busca productos o servicios existentes y agregalos a la cotizacion." onClose={() => setCatalogOpen(false)}>
         <div className="mb-4 flex h-11 items-center gap-2 rounded-md border border-input bg-white px-3">
@@ -386,6 +439,25 @@ export default function QuoteBuilderPage() {
           </div>
         ) : null}
       </Modal>
+
+      <div className="mobile-sticky-bottom fixed inset-x-0 bottom-0 z-30 border-t border-border bg-white/95 px-4 pt-3 shadow-[0_-10px_30px_rgba(15,23,42,0.12)] backdrop-blur lg:hidden">
+        <div className="mx-auto max-w-3xl">
+          <div className="mb-3 grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <span className="label">Subtotal</span>
+              <p className="font-semibold">{formatCurrency(totals.subtotal)}</p>
+            </div>
+            <div className="text-right">
+              <span className="label">Total</span>
+              <p className="text-lg font-bold">{formatCurrency(totals.total)}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="secondary" disabled={!canEdit} onClick={() => setCatalogOpen(true)}><Plus className="h-4 w-4" />Agregar item</Button>
+            <Button disabled={!canEdit} loading={saveMutation.isPending} onClick={handleSave}><Save className="h-4 w-4" />Guardar</Button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

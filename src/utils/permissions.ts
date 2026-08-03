@@ -1,6 +1,6 @@
 import type { UserRole } from "@/types/user"
 
-export type Resource = "dashboard" | "quotes" | "quoteBuilder" | "clients" | "catalog" | "reports" | "settings"
+export type Resource = "dashboard" | "quotes" | "quoteBuilder" | "clients" | "catalog" | "reports" | "settings" | "team"
 export type Action =
   | "view"
   | "create"
@@ -13,8 +13,8 @@ export type Action =
   | "manageClients"
 
 const accessMatrix: Record<UserRole, Resource[]> = {
-  tenant_admin: ["dashboard", "quotes", "quoteBuilder", "clients", "catalog", "reports", "settings"],
-  super_admin: ["dashboard", "quotes", "quoteBuilder", "clients", "catalog", "reports", "settings"],
+  tenant_admin: ["dashboard", "quotes", "quoteBuilder", "clients", "catalog", "reports", "settings", "team"],
+  super_admin: ["dashboard", "quotes", "quoteBuilder", "clients", "catalog", "reports", "settings", "team"],
   seller: ["dashboard", "quotes", "quoteBuilder", "clients", "catalog", "reports"],
   viewer: ["dashboard", "quotes", "clients", "catalog", "reports"],
 }

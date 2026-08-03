@@ -10,6 +10,8 @@ import { ProtectedRoute } from "@/features/auth/components/ProtectedRoute"
 const LoginPage = lazy(() => import("@/features/auth/pages/LoginPage"))
 const RegisterPage = lazy(() => import("@/features/auth/pages/RegisterPage"))
 const ForgotPasswordPage = lazy(() => import("@/features/auth/pages/ForgotPasswordPage"))
+const VerifyEmailPage = lazy(() => import("@/features/auth/pages/VerifyEmailPage"))
+const ResetPasswordPage = lazy(() => import("@/features/auth/pages/ResetPasswordPage"))
 const DashboardPage = lazy(() => import("@/features/dashboard/pages/DashboardPage"))
 const QuotesListPage = lazy(() => import("@/features/quotes/pages/QuotesListPage"))
 const QuoteDetailPage = lazy(() => import("@/features/quotes/pages/QuoteDetailPage"))
@@ -18,6 +20,9 @@ const ClientsListPage = lazy(() => import("@/features/clients/pages/ClientsListP
 const CatalogItemsPage = lazy(() => import("@/features/catalog/pages/CatalogItemsPage"))
 const ReportsPage = lazy(() => import("@/features/reports/pages/ReportsPage"))
 const CompanySettingsPage = lazy(() => import("@/features/settings/pages/CompanySettingsPage"))
+const TeamPage = lazy(() => import("@/features/settings/pages/TeamPage"))
+const BillingPage = lazy(() => import("@/features/settings/pages/BillingPage"))
+const IntegrationsPage = lazy(() => import("@/features/settings/pages/IntegrationsPage"))
 const PublicQuotePage = lazy(() => import("@/features/public/pages/PublicQuotePage"))
 const LandingPage = lazy(() => import("@/features/marketing/pages/LandingPage"))
 
@@ -43,6 +48,8 @@ const router = createBrowserRouter([
   { path: "/auth/register", element: <Navigate to={routes.register} replace /> },
   { path: routes.forgotPassword, element: withSuspense(<ForgotPasswordPage />) },
   { path: "/auth/forgot-password", element: <Navigate to={routes.forgotPassword} replace /> },
+  { path: routes.verifyEmail, element: withSuspense(<VerifyEmailPage />) },
+  { path: routes.resetPassword, element: withSuspense(<ResetPasswordPage />) },
   {
     path: "/app",
     element: (
@@ -61,6 +68,9 @@ const router = createBrowserRouter([
       { path: "catalog/categories", element: <ProtectedRoute resource="catalog">{withSuspense(<CatalogItemsPage />)}</ProtectedRoute> },
       { path: "reports", element: <ProtectedRoute resource="reports">{withSuspense(<ReportsPage />)}</ProtectedRoute> },
       { path: "settings/company", element: <ProtectedRoute resource="settings">{withSuspense(<CompanySettingsPage />)}</ProtectedRoute> },
+      { path: "settings/team", element: <ProtectedRoute resource="team">{withSuspense(<TeamPage />)}</ProtectedRoute> },
+      { path: "settings/billing", element: <ProtectedRoute resource="settings">{withSuspense(<BillingPage />)}</ProtectedRoute> },
+      { path: "settings/integrations", element: <ProtectedRoute resource="settings">{withSuspense(<IntegrationsPage />)}</ProtectedRoute> },
     ],
   },
   {

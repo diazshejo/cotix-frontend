@@ -10,6 +10,7 @@ export interface CompanySettings {
   city: string
   department: string
   brandColor: string
+  logoUrl?: string
   defaultCurrency: "GTQ" | "USD"
   taxLabel: string
   taxRate: number

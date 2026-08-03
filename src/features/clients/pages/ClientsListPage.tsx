@@ -6,7 +6,9 @@ import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { createClient, listClients } from "@/api/clients"
 import { EmptyState } from "@/components/common/EmptyState"
-import { ErrorState, LoadingState } from "@/components/common/StateBlock"
+import { MobileFab } from "@/components/common/MobileFab"
+import { PageSkeleton } from "@/components/common/Skeleton"
+import { ErrorState } from "@/components/common/StateBlock"
 import { Button } from "@/components/ui/Button"
 import { Card, CardContent, CardHeader } from "@/components/ui/Card"
 import { InputField, SelectField } from "@/components/ui/Form"
@@ -51,14 +53,14 @@ export default function ClientsListPage() {
   })
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pb-20 sm:pb-0">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <p className="label">CRM ligero</p>
           <h2 className="mt-2 text-2xl font-bold">Clientes</h2>
           <p className="mt-2 text-sm text-muted-foreground">Historial comercial y datos de contacto centralizados.</p>
         </div>
-        <Button disabled={!canManageClients} onClick={() => setModalOpen(true)} title={!canManageClients ? "Necesitas un workspace activo para crear clientes" : undefined}><Plus className="h-4 w-4" />Nuevo cliente</Button>
+        <Button className="hidden sm:inline-flex" disabled={!canManageClients} onClick={() => setModalOpen(true)} title={!canManageClients ? "Necesitas un workspace activo para crear clientes" : undefined}><Plus className="h-4 w-4" />Nuevo cliente</Button>
       </div>
 
       <Card>
@@ -69,10 +71,16 @@ export default function ClientsListPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? <LoadingState title="Cargando clientes" /> : null}
+          {isLoading ? <PageSkeleton variant="list" /> : null}
           {isError ? <ErrorState title="No se pudieron cargar clientes" description="La API no respondio correctamente." onAction={() => void refetch()} /> : null}
           {!isLoading && !isError && data.length === 0 ? (
-            <EmptyState icon={Users} title="No hay clientes todavia" description="Crea clientes desde el boton superior cuando tu rol tenga permiso. Asi podras reutilizar contactos en nuevas cotizaciones." />
+            <EmptyState
+              icon={Users}
+              title="Aun no tienes clientes"
+              description="Crea clientes para reutilizar contactos y acelerar nuevas cotizaciones."
+              action={canManageClients ? "Crear cliente" : undefined}
+              onAction={canManageClients ? () => setModalOpen(true) : undefined}
+            />
           ) : null}
           {!isLoading && !isError && data.length > 0 ? (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -104,12 +112,13 @@ export default function ClientsListPage() {
             <option value="company">Empresa</option>
             <option value="person">Persona</option>
           </SelectField>
-          <div className="flex items-end justify-end gap-2 sm:col-span-2">
+          <div className="grid gap-2 sm:col-span-2 sm:flex sm:items-end sm:justify-end">
             <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>Cancelar</Button>
             <Button type="submit" loading={mutation.isPending}>Guardar cliente</Button>
           </div>
         </form>
       </Modal>
+      <MobileFab icon={Plus} label="Nuevo" onClick={() => setModalOpen(true)} disabled={!canManageClients} />
     </div>
   )
 }

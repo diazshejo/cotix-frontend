@@ -46,7 +46,13 @@ export interface QuoteDto {
   discount_total?: number | string
   taxable_base?: number | string
   total_tax?: number | string
-  items: QuoteItemDto[]
+  company_name?: string
+  company_city?: string
+  company_department?: string
+  company_logo_url?: string
+  company_primary_color?: string
+  company_website?: string
+  items?: QuoteItemDto[]
 }
 
 export interface QuotePayloadDto {
@@ -105,7 +111,13 @@ function mapQuote(dto: QuoteDto): Quote {
     publicToken: dto.public_token,
     notes: dto.notes ?? "",
     termsConditions: dto.terms_conditions ?? "",
-    items: dto.items.map(mapQuoteItem),
+    companyName: dto.company_name ?? "",
+    companyCity: dto.company_city ?? "",
+    companyDepartment: dto.company_department ?? "",
+    companyLogoUrl: dto.company_logo_url ?? "",
+    companyPrimaryColor: dto.company_primary_color ?? "",
+    companyWebsite: dto.company_website ?? "",
+    items: (dto.items ?? []).map(mapQuoteItem),
   }
 }
 
@@ -120,7 +132,7 @@ function toQuotePayload(quote: Quote): QuotePayloadDto {
     terms_conditions: quote.termsConditions ?? "",
     items: quote.items.map((item) => ({
       catalog_item: null,
-      description: item.description,
+      description: item.description || item.name,
       quantity: item.quantity,
       unit: "unidad",
       unit_price: item.unitPrice,
@@ -132,7 +144,9 @@ function toQuotePayload(quote: Quote): QuotePayloadDto {
 }
 
 export async function listQuotes(params: QuoteListParams = {}) {
-  const response = apiClient.get<QuoteDto[]>("/quotes/", { params }).then((res) => res.data.map(mapQuote))
+  const response = apiClient
+    .get<{ count: number; next: string | null; previous: string | null; results: QuoteDto[] }>("/quotes/", { params })
+    .then((res) => res.data.results.map(mapQuote))
   return withMockFallback(response, quotes)
 }
 
@@ -170,4 +184,16 @@ export async function acceptPublicQuote(token: string) {
 export async function rejectPublicQuote(token: string) {
   const response = apiClient.post<{ status: QuoteStatus }>(`/public/quotes/${token}/respond/`, { response: "rejected" }).then(() => getPublicQuote(token))
   return withMockFallback(response, { ...quotes[0], status: "rejected" })
+}
+
+export interface MonthlyQuotaUsage {
+  monthly_quotes: {
+    used: number
+    limit: number | null
+  }
+}
+
+export async function getMonthlyQuotaUsage(): Promise<MonthlyQuotaUsage> {
+  const response = await apiClient.get<MonthlyQuotaUsage>("/quotes/plan-usage/")
+  return response.data
 }

@@ -63,7 +63,7 @@ export default function QuoteDetailPage() {
             <h2 className="text-2xl font-bold">{quote.number}</h2>
             <StatusBadge status={quote.status} />
           </div>
-          <p className="mt-2 text-sm text-muted-foreground">{quote.clientName} · valida hasta {quote.validUntil}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{quote.clientName} - valida hasta {quote.validUntil}</p>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex">
           <Button variant="secondary" disabled={!publicUrl} onClick={copyPublicLink}><Copy className="h-4 w-4" />Link</Button>

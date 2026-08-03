@@ -24,6 +24,13 @@
   box-sizing: border-box;
 }
 
+html,
+body,
+#root {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
   min-width: 320px;
@@ -62,5 +69,21 @@ textarea {
 
   .focus-ring {
     @apply outline-none focus-visible:ring-4 focus-visible:ring-primary/15;
+  }
+
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .mobile-sticky-bottom {
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  }
+
+  .mobile-fab {
+    bottom: calc(1rem + env(safe-area-inset-bottom));
   }
 }

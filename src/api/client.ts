@@ -76,6 +76,15 @@ export function getApiErrorMessage(error: unknown) {
   return "Ocurrio un error inesperado."
 }
 
+export function isPlanRestriction(error: unknown): boolean {
+  if (!axios.isAxiosError(error) || error.response?.status !== 403) return false
+  const data = error.response.data as { detail?: unknown; message?: unknown; error?: unknown }
+  const text = [data?.detail, data?.message, data?.error]
+    .filter((value): value is string => typeof value === "string")
+    .join(" ")
+  return /plan|premium|business|actualiza|integraci|cotizaci|usuario/i.test(text)
+}
+
 export async function withMockFallback<T>(request: Promise<T>, fallback: T): Promise<T> {
   if (import.meta.env.VITE_USE_MOCKS === "false") return request
 

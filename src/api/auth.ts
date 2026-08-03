@@ -1,5 +1,5 @@
 import { apiClient, credentialClient, refreshAccessToken, setAccessToken } from "@/api/client"
-import type { AuthUser, UserRole } from "@/types/user"
+import type { AuthUser, TenantPlan, TenantStatus, UserRole } from "@/types/user"
 
 export interface BackendUserDto {
   id: string | number
@@ -9,8 +9,13 @@ export interface BackendUserDto {
   last_name?: string
   email: string
   role?: UserRole
+  email_verified?: boolean
   tenant_id?: string | number
-  tenant?: { id: string | number }
+  tenant?: {
+    id: string | number
+    plan?: string
+    status?: string
+  }
 }
 
 export interface AuthResponseDto {
@@ -25,9 +30,17 @@ export interface LoginRequestDto {
 
 export interface RegisterRequestDto {
   business_name: string
-  nit: string
+  trade_name?: string
+  nit?: string
   email: string
   password: string
+  first_name?: string
+  last_name?: string
+}
+
+export interface RegisterResult {
+  pendingVerification: true
+  email: string
 }
 
 function mapUser(dto: BackendUserDto): AuthUser {
@@ -38,6 +51,8 @@ function mapUser(dto: BackendUserDto): AuthUser {
     email: dto.email,
     role: dto.role ?? "seller",
     tenantId: String(dto.tenant_id ?? dto.tenant?.id ?? ""),
+    tenantPlan: (dto.tenant?.plan ?? "free") as TenantPlan,
+    tenantStatus: (dto.tenant?.status ?? "demo") as TenantStatus,
   }
 }
 
@@ -48,9 +63,29 @@ export async function login(payload: LoginRequestDto) {
   return { access: response.data.access, user }
 }
 
-export async function register(payload: RegisterRequestDto) {
+export async function register(payload: RegisterRequestDto): Promise<RegisterResult> {
   await credentialClient.post<BackendUserDto>("/auth/register/", payload)
-  return login({ email: payload.email, password: payload.password })
+  return { pendingVerification: true, email: payload.email }
+}
+
+export async function verifyEmail(token: string): Promise<void> {
+  await credentialClient.post("/auth/verify-email/", { token })
+}
+
+export async function resendVerification(email: string): Promise<void> {
+  await credentialClient.post("/auth/resend-verification/", { email })
+}
+
+export async function requestPasswordReset(email: string): Promise<void> {
+  await credentialClient.post("/auth/forgot-password/", { email })
+}
+
+export async function resetPassword(token: string, password: string, confirmPassword: string): Promise<void> {
+  await credentialClient.post("/auth/reset-password-confirm/", {
+    token,
+    password,
+    confirm_password: confirmPassword,
+  })
 }
 
 export async function refreshSession() {
@@ -65,9 +100,4 @@ export async function getMe() {
 export async function logout() {
   await credentialClient.post("/auth/logout/").catch(() => undefined)
   setAccessToken(null)
-}
-
-export async function requestPasswordReset(email: string) {
-  const response = await credentialClient.post<{ ok: boolean }>("/auth/forgot-password/", { email })
-  return response.data
 }

@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query"
 import { ArrowUpRight, Clock, FileText, TrendingUp } from "lucide-react"
-import { Bar, BarChart, CartesianGrid, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+import { Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { getDashboardMetrics } from "@/api/dashboard"
-import { ErrorState, LoadingState } from "@/components/common/StateBlock"
+import { PageSkeleton } from "@/components/common/Skeleton"
+import { ErrorState } from "@/components/common/StateBlock"
 import { Card, CardContent, CardHeader } from "@/components/ui/Card"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { queryKeys } from "@/constants/queryKeys"
@@ -15,7 +16,7 @@ export default function DashboardPage() {
     queryFn: () => getDashboardMetrics(period),
   })
 
-  if (isLoading) return <LoadingState title="Cargando dashboard" />
+  if (isLoading) return <PageSkeleton variant="dashboard" />
   if (isError || !data) {
     return (
       <ErrorState
@@ -60,9 +61,9 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="label">Rendimiento</p>
-                <h2 className="mt-1 text-lg font-bold">Conversion de cotizaciones</h2>
+                <h2 className="mt-1 text-lg font-bold">Conversión de cotizaciones</h2>
               </div>
-              <select className="field w-40">
+              <select className="field w-full sm:w-40">
                 <option>Este mes</option>
                 <option>Este año</option>
               </select>
@@ -70,17 +71,25 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="h-[320px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.conversionSeries}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#dbe5ec" />
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} />
-                  <YAxis axisLine={false} tickLine={false} />
-                  <Tooltip cursor={{ fill: "rgba(15, 23, 42, .04)" }} />
-                  <Bar dataKey="sent" name="Enviadas" fill="#2563eb" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="accepted" name="Aceptadas" fill="#10b981" radius={[6, 6, 0, 0]} />
-                  <Line type="monotone" dataKey="rate" name="Conversion" stroke="#0891b2" strokeWidth={3} />
-                </BarChart>
-              </ResponsiveContainer>
+              {data.conversionSeries.length === 0 ? (
+                <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
+                  <p className="text-sm font-medium text-muted-foreground">Sin datos aun</p>
+                  <p className="text-xs text-muted-foreground">Envia cotizaciones para ver el grafico de conversión.</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={data.conversionSeries}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#dbe5ec" />
+                    <XAxis dataKey="month" axisLine={false} tickLine={false} />
+                    <YAxis yAxisId="left" axisLine={false} tickLine={false} />
+                    <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
+                    <Tooltip cursor={{ fill: "rgba(15, 23, 42, .04)" }} />
+                    <Bar yAxisId="left" dataKey="sent" name="Enviadas" fill="#2563eb" radius={[6, 6, 0, 0]} />
+                    <Bar yAxisId="left" dataKey="accepted" name="Aceptadas" fill="#10b981" radius={[6, 6, 0, 0]} />
+                    <Line yAxisId="right" type="monotone" dataKey="rate" name="Conversion %" stroke="#0891b2" strokeWidth={2} dot={false} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>

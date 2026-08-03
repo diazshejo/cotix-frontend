@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Check, Download, X } from "lucide-react"
+import { useEffect } from "react"
 import { useParams } from "react-router-dom"
 import { toast } from "sonner"
 import { getApiErrorMessage } from "@/api/client"
 import { acceptPublicQuote, downloadQuotePdf, getPublicQuote, rejectPublicQuote } from "@/api/quotes"
+import { applyBrandColor } from "@/utils/color"
 import { useConfirm } from "@/components/common/ConfirmDialog"
 import { ErrorState, LoadingState } from "@/components/common/StateBlock"
 import { Button } from "@/components/ui/Button"
@@ -20,6 +22,10 @@ export default function PublicQuotePage() {
     queryKey: queryKeys.publicQuote(token),
     queryFn: () => getPublicQuote(token),
   })
+
+  useEffect(() => {
+    if (quote?.companyPrimaryColor) applyBrandColor(quote.companyPrimaryColor)
+  }, [quote?.companyPrimaryColor])
 
   const respondMutation = useMutation({
     mutationFn: (decision: "accept" | "reject") => (decision === "accept" ? acceptPublicQuote(token) : rejectPublicQuote(token)),
@@ -73,10 +79,23 @@ export default function PublicQuotePage() {
         <div className="border-b border-border bg-slate-950 px-5 py-6 text-white sm:px-8">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
             <div>
-              <p className="text-xl font-bold">Distribuidora Garcia S.A.</p>
-              <p className="mt-1 text-sm text-slate-300">Quetzaltenango, Guatemala</p>
+              <p className="text-xl font-bold">{quote.companyName || "Empresa"}</p>
+              {(quote.companyCity || quote.companyDepartment) && (
+                <p className="mt-1 text-sm text-slate-300">
+                  {[quote.companyCity, quote.companyDepartment].filter(Boolean).join(", ")}
+                </p>
+              )}
+              {quote.companyWebsite && (
+                <p className="mt-1 text-xs text-slate-400">{quote.companyWebsite}</p>
+              )}
             </div>
-            <div className="rounded-md bg-cyan-300 px-4 py-2 text-sm font-bold text-slate-950">COTIX</div>
+            {quote.companyLogoUrl ? (
+              <img src={quote.companyLogoUrl} alt="Logo empresa" className="h-12 max-w-[160px] object-contain brightness-0 invert" />
+            ) : (
+              <div className="rounded-md bg-primary px-4 py-2 text-sm font-bold text-white">
+                {quote.companyName?.slice(0, 5).toUpperCase() || "COTIX"}
+              </div>
+            )}
           </div>
         </div>
 
@@ -143,12 +162,17 @@ export default function PublicQuotePage() {
             </div>
           </section>
 
-          <section className="rounded-lg border border-border bg-slate-50 p-5">
-            <p className="font-semibold">Notas y terminos</p>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Esta cotizacion es valida por el tiempo indicado. Los precios estan sujetos a disponibilidad.
-            </p>
-          </section>
+          {(quote.notes || quote.termsConditions) && (
+            <section className="rounded-lg border border-border bg-slate-50 p-5">
+              <p className="font-semibold">Notas y terminos</p>
+              {quote.notes && (
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{quote.notes}</p>
+              )}
+              {quote.termsConditions && (
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">{quote.termsConditions}</p>
+              )}
+            </section>
+          )}
 
           <section className="mt-6 rounded-lg border border-border bg-white p-5 text-center">
             {canRespond ? (

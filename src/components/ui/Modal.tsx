@@ -14,14 +14,14 @@ export function Modal({ open, title, description, children, onClose }: ModalProp
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 py-6 backdrop-blur-sm">
+    <div className="safe-top fixed inset-0 z-50 flex items-end justify-center bg-slate-950/55 px-0 py-0 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6">
       <section
         aria-modal="true"
         role="dialog"
         aria-labelledby="modal-title"
-        className="surface max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white"
+        className="surface flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-xl bg-white sm:rounded-lg"
       >
-        <header className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
+        <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-border bg-white px-5 py-4">
           <div>
             <h2 id="modal-title" className="text-lg font-bold">{title}</h2>
             {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
@@ -30,7 +30,7 @@ export function Modal({ open, title, description, children, onClose }: ModalProp
             <X className="h-4 w-4" />
           </Button>
         </header>
-        <div className="p-5">{children}</div>
+        <div className="safe-bottom overflow-y-auto overscroll-contain p-5">{children}</div>
       </section>
     </div>
   )

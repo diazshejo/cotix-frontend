@@ -1,8 +1,18 @@
 import { z } from "zod"
 
+// Must match backend: apps/common/validators.py NIT_RE
+const NIT_RE = /^(CF|[0-9]{5,12}-?[0-9Kk])$/i
+
 const requiredText = (label: string, min = 2) => z.string().trim().min(min, `${label} es requerido.`)
 const money = z.coerce.number({ invalid_type_error: "Ingresa un monto valido." }).min(0, "No puede ser negativo.")
 const percent = z.coerce.number({ invalid_type_error: "Ingresa un porcentaje valido." }).min(0).max(100)
+
+// min/max must stay in sync with backend serializers.py PASSWORD_MIN/MAX_LENGTH
+const passwordField = (label = "El password") =>
+  z
+    .string()
+    .min(8, `${label} debe tener al menos 8 caracteres.`)
+    .max(128, `${label} no puede superar 128 caracteres.`)
 
 export const loginSchema = z.object({
   email: z.string().trim().email("Ingresa un email valido."),
@@ -11,10 +21,32 @@ export const loginSchema = z.object({
 
 export const registerSchema = z
   .object({
-    businessName: requiredText("El nombre de empresa"),
-    nit: z.string().trim().optional(),
+    // min(3) matches backend validate_business_name
+    businessName: z.string().trim().min(3, "El nombre de empresa debe tener al menos 3 caracteres."),
+    tradeName: z.string().trim().max(200).optional(),
+    nit: z
+      .string()
+      .trim()
+      .optional()
+      .refine((val) => !val || NIT_RE.test(val), { message: "Formato NIT invalido. Ejemplo: 1234567-8 o CF." }),
     email: z.string().trim().email("Ingresa un email valido."),
-    password: z.string().min(8, "Minimo 8 caracteres."),
+    password: passwordField(),
+    confirmPassword: z.string().min(8, "Confirma el password."),
+    firstName: z.string().trim().max(100).optional(),
+    lastName: z.string().trim().max(100).optional(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Los passwords no coinciden.",
+  })
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().trim().email("Ingresa un email valido."),
+})
+
+export const resetPasswordSchema = z
+  .object({
+    password: passwordField(),
     confirmPassword: z.string().min(8, "Confirma el password."),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -49,15 +81,21 @@ export const quoteItemSchema = z.object({
   taxRate: z.coerce.number().min(0).max(1),
 })
 
-export const quoteSchema = z.object({
-  clientId: requiredText("El cliente", 1),
-  clientName: requiredText("El cliente"),
-  title: requiredText("El titulo"),
-  issueDate: z.string().min(1, "Selecciona fecha de emision."),
-  validUntil: z.string().min(1, "Selecciona fecha de vencimiento."),
-  items: z.array(quoteItemSchema).min(1, "Agrega al menos un producto o servicio."),
-  notes: z.string().trim().optional(),
-})
+export const quoteSchema = z
+  .object({
+    clientId: requiredText("El cliente", 1),
+    clientName: requiredText("El cliente"),
+    title: requiredText("El titulo"),
+    issueDate: z.string().min(1, "Selecciona fecha de emision."),
+    validUntil: z.string().min(1, "Selecciona fecha de vencimiento."),
+    items: z.array(quoteItemSchema).min(1, "Agrega al menos un producto o servicio."),
+    notes: z.string().trim().optional(),
+    termsConditions: z.string().trim().optional(),
+  })
+  .refine((data) => !data.issueDate || !data.validUntil || data.issueDate <= data.validUntil, {
+    path: ["validUntil"],
+    message: "La fecha de vencimiento debe ser igual o posterior a la fecha de emision.",
+  })
 
 export const companySettingsSchema = z.object({
   businessName: requiredText("El nombre legal"),
@@ -80,9 +118,31 @@ export const companySettingsSchema = z.object({
   defaultTerms: requiredText("Los terminos", 8),
 })
 
+export const createMemberSchema = z
+  .object({
+    firstName: requiredText("El nombre"),
+    lastName: requiredText("El apellido"),
+    email: z.string().trim().email("Ingresa un email valido."),
+    role: z.enum(["tenant_admin", "seller", "viewer"]),
+    password: passwordField("El password inicial"),
+    confirmPassword: z.string().min(8, "Confirma el password."),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Los passwords no coinciden.",
+  })
+
+export const editMemberRoleSchema = z.object({
+  role: z.enum(["tenant_admin", "seller", "viewer"]),
+})
+
 export type LoginForm = z.infer<typeof loginSchema>
 export type RegisterForm = z.infer<typeof registerSchema>
+export type ForgotPasswordForm = z.infer<typeof forgotPasswordSchema>
+export type ResetPasswordForm = z.infer<typeof resetPasswordSchema>
 export type ClientForm = z.infer<typeof clientSchema>
 export type CatalogItemForm = z.infer<typeof catalogItemSchema>
 export type QuoteForm = z.infer<typeof quoteSchema>
 export type CompanySettingsForm = z.infer<typeof companySettingsSchema>
+export type CreateMemberForm = z.infer<typeof createMemberSchema>
+export type EditMemberRoleForm = z.infer<typeof editMemberRoleSchema>

@@ -34,12 +34,12 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     <ConfirmContext.Provider value={value}>
       {children}
       {state ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/55 px-4 py-6 backdrop-blur-sm">
+        <div className="safe-top fixed inset-0 z-[60] flex items-end justify-center bg-slate-950/55 px-0 py-0 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6">
           <section
             aria-modal="true"
             role="dialog"
             aria-labelledby="confirm-title"
-            className="surface w-full max-w-md rounded-lg bg-white p-5"
+            className="surface safe-bottom w-full max-w-md rounded-t-xl bg-white p-5 sm:rounded-lg"
           >
             <div className="flex gap-4">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-amber-100 text-amber-700">
@@ -50,7 +50,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">{state.description}</p>
               </div>
             </div>
-            <div className="mt-6 flex justify-end gap-2">
+            <div className="mt-6 grid grid-cols-2 gap-2 sm:flex sm:justify-end">
               <Button variant="secondary" onClick={() => close(false)}>
                 {state.cancelLabel ?? "Cancelar"}
               </Button>

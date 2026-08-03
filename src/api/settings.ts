@@ -9,18 +9,19 @@ export interface CompanySettingsDto {
   tax_regime: string
   email: string
   phone: string
-  website?: string
+  website: string
   address_line1: string
   city: string
   department: string
   primary_color: string
+  logo_url?: string
   default_currency: "GTQ" | "USD"
   tax_label: string
   tax_rate: number | string
   quote_prefix: string
-  quote_digits?: number
+  quote_digits: number
   default_footer_text: string
-  default_terms?: string
+  default_terms: string
 }
 
 function mapSettings(dto: CompanySettingsDto): CompanySettings {
@@ -31,18 +32,19 @@ function mapSettings(dto: CompanySettingsDto): CompanySettings {
     taxRegime: dto.tax_regime,
     email: dto.email,
     phone: dto.phone,
-    website: dto.website ?? "",
+    website: dto.website,
     addressLine1: dto.address_line1,
     city: dto.city,
     department: dto.department,
     brandColor: dto.primary_color,
+    logoUrl: dto.logo_url ?? "",
     defaultCurrency: dto.default_currency,
     taxLabel: dto.tax_label,
     taxRate: Number(dto.tax_rate),
     quotePrefix: dto.quote_prefix,
-    quoteDigits: dto.quote_digits ?? 4,
+    quoteDigits: dto.quote_digits,
     footerText: dto.default_footer_text,
-    defaultTerms: dto.default_terms ?? "",
+    defaultTerms: dto.default_terms,
   }
 }
 
@@ -54,7 +56,7 @@ function toSettingsDto(settings: CompanySettings): CompanySettingsDto {
     tax_regime: settings.taxRegime,
     email: settings.email,
     phone: settings.phone,
-    website: settings.website,
+    website: settings.website ?? "",
     address_line1: settings.addressLine1,
     city: settings.city,
     department: settings.department,
@@ -77,4 +79,13 @@ export async function getCompanySettings() {
 export async function updateCompanySettings(payload: CompanySettings) {
   const response = apiClient.put<CompanySettingsDto>("/tenant/settings/", toSettingsDto(payload)).then((res) => mapSettings(res.data))
   return withMockFallback(response, payload)
+}
+
+export async function uploadLogo(file: File): Promise<{ logo_url: string }> {
+  const form = new FormData()
+  form.append("logo", file)
+  const response = await apiClient.post<{ logo_url: string }>("/tenant/settings/logo/", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  })
+  return response.data
 }

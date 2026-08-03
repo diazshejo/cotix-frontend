@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom"
 import { useMutation } from "@tanstack/react-query"
-import { Bell, Menu, Plus, Search } from "lucide-react"
+import { Menu, Plus, Search } from "lucide-react"
 import { toast } from "sonner"
 import { logout } from "@/api/auth"
 import { Button } from "@/components/ui/Button"
@@ -9,6 +9,7 @@ import { routes } from "@/constants/routes"
 import { useAuthStore } from "@/stores/authStore"
 import { canPerform } from "@/utils/permissions"
 import { publishSessionEvent } from "@/utils/sessionSync"
+import { NotificationBell } from "@/features/notifications/components/NotificationBell"
 
 const titles: Record<string, string> = {
   [routes.dashboard]: "Dashboard",
@@ -26,6 +27,8 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const user = useAuthStore((state) => state.user)
   const clearSession = useAuthStore((state) => state.clearSession)
   const confirm = useConfirm()
+  const pageFabRoutes: string[] = [routes.quotes, routes.clients, routes.catalogItems, routes.catalogCategories, routes.settingsIntegrations]
+  const hasPageFab = pageFabRoutes.includes(pathname)
   const logoutMutation = useMutation({
     mutationFn: logout,
     onSettled: () => {
@@ -47,7 +50,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
   }
 
   return (
-    <header className="sticky top-0 z-20 border-b border-border bg-background/82 px-4 py-3 backdrop-blur xl:px-8">
+    <header className="safe-top sticky top-0 z-20 border-b border-border bg-background/82 px-4 py-3 backdrop-blur xl:px-8">
       <div className="flex items-center gap-3">
         <Button variant="secondary" className="h-10 w-10 px-0 lg:hidden" aria-label="Abrir menu" onClick={onMenuClick}>
           <Menu className="h-4 w-4" />
@@ -66,14 +69,12 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
           />
         </div>
 
-        <Button variant="secondary" disabled className="hidden h-10 w-10 px-0 sm:inline-flex" aria-label="Notificaciones proximamente" title="Notificaciones proximamente">
-          <Bell className="h-4 w-4" />
-        </Button>
+        <NotificationBell />
         <div className="hidden min-w-0 text-right md:block">
           <p className="truncate text-sm font-semibold">{user?.name}</p>
           <p className="text-xs text-muted-foreground">{user?.role}</p>
         </div>
-        <Button variant="ghost" loading={logoutMutation.isPending} onClick={requestLogout}>
+        <Button variant="ghost" loading={logoutMutation.isPending} onClick={requestLogout} className="hidden sm:inline-flex">
           Salir
         </Button>
         {canCreateQuote ? (
@@ -83,6 +84,15 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
           >
             <Plus className="h-4 w-4" />
             Nueva
+          </Link>
+        ) : null}
+        {canCreateQuote && pathname !== routes.newQuote && !hasPageFab ? (
+          <Link
+            to={routes.newQuote}
+            className="focus-ring inline-flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm transition hover:bg-primary/92 sm:hidden"
+            aria-label="Nueva cotizacion"
+          >
+            <Plus className="h-4 w-4" />
           </Link>
         ) : null}
       </div>

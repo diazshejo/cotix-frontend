@@ -4,7 +4,9 @@ import { Filter, Plus, Search } from "lucide-react"
 import { useMemo, useState } from "react"
 import { listQuotes } from "@/api/quotes"
 import { EmptyState } from "@/components/common/EmptyState"
-import { ErrorState, LoadingState } from "@/components/common/StateBlock"
+import { MobileFab } from "@/components/common/MobileFab"
+import { PageSkeleton } from "@/components/common/Skeleton"
+import { ErrorState } from "@/components/common/StateBlock"
 import { Button } from "@/components/ui/Button"
 import { Card, CardContent, CardHeader } from "@/components/ui/Card"
 import { StatusBadge } from "@/components/common/StatusBadge"
@@ -37,7 +39,7 @@ export default function QuotesListPage() {
   })
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pb-20 sm:pb-0">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <p className="label">Pipeline comercial</p>
@@ -45,7 +47,7 @@ export default function QuotesListPage() {
           <p className="mt-2 text-sm text-muted-foreground">Busca, filtra y da seguimiento al estado de cada propuesta.</p>
         </div>
         {canCreate ? (
-          <Link to={routes.newQuote}>
+          <Link className="hidden sm:block" to={routes.newQuote}>
             <Button>
               <Plus className="h-4 w-4" />
               Nueva cotizacion
@@ -81,7 +83,7 @@ export default function QuotesListPage() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {isLoading ? <div className="p-5"><LoadingState title="Cargando cotizaciones" /></div> : null}
+          {isLoading ? <div className="p-5"><PageSkeleton variant="list" /></div> : null}
           {isError ? (
             <div className="p-5">
               <ErrorState title="No se pudieron cargar las cotizaciones" description="Intenta nuevamente o revisa la conexion con la API." onAction={() => void refetch()} />
@@ -89,7 +91,13 @@ export default function QuotesListPage() {
           ) : null}
           {!isLoading && !isError && filteredQuotes.length === 0 ? (
             <div className="p-5">
-              <EmptyState icon={Search} title="Sin cotizaciones" description="No encontramos cotizaciones con los filtros actuales. Ajusta la busqueda o limpia los filtros para ver mas resultados." />
+              <EmptyState
+                icon={Search}
+                title={search || status ? "Sin resultados" : "Aun no tienes cotizaciones"}
+                description={search || status ? "Ajusta la busqueda o limpia los filtros para ver mas resultados." : "Crea tu primera cotizacion para iniciar el seguimiento comercial."}
+                action={!search && !status && canCreate ? "Crear cotizacion" : undefined}
+                onAction={!search && !status && canCreate ? () => { window.location.href = routes.newQuote } : undefined}
+              />
             </div>
           ) : null}
           {!isLoading && !isError && filteredQuotes.length > 0 ? (
@@ -144,6 +152,7 @@ export default function QuotesListPage() {
           ) : null}
         </CardContent>
       </Card>
+      {canCreate ? <MobileFab icon={Plus} label="Nueva" to={routes.newQuote} /> : null}
     </div>
   )
 }

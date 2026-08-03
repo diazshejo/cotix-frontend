@@ -6,4 +6,10 @@ export const queryKeys = {
   clients: (search: string) => ["clients", search] as const,
   catalogItems: (search: string) => ["catalogItems", search] as const,
   companySettings: ["companySettings"] as const,
+  integrations: ["integrations"] as const,
+  integrationLogs: (id: string) => ["integrations", id, "logs"] as const,
+  planUsage: ["planUsage"] as const,
+  notificationsUnread: ["notifications", "unread"] as const,
+  notificationsRecent: ["notifications", "recent"] as const,
+  teamMembers: ["teamMembers"] as const,
 }

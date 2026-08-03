@@ -25,6 +25,12 @@ export interface Quote {
   publicToken?: string
   notes?: string
   termsConditions?: string
+  companyName?: string
+  companyCity?: string
+  companyDepartment?: string
+  companyLogoUrl?: string
+  companyPrimaryColor?: string
+  companyWebsite?: string
   items: QuoteItem[]
 }
 

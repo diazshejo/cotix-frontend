@@ -6,7 +6,9 @@ import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { createCatalogItem, listCatalogItems } from "@/api/catalog"
 import { EmptyState } from "@/components/common/EmptyState"
-import { ErrorState, LoadingState } from "@/components/common/StateBlock"
+import { MobileFab } from "@/components/common/MobileFab"
+import { PageSkeleton } from "@/components/common/Skeleton"
+import { ErrorState } from "@/components/common/StateBlock"
 import { Button } from "@/components/ui/Button"
 import { Card, CardContent, CardHeader } from "@/components/ui/Card"
 import { InputField, SelectField, TextareaField } from "@/components/ui/Form"
@@ -50,14 +52,14 @@ export default function CatalogItemsPage() {
   })
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pb-20 sm:pb-0">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <p className="label">Catalogo</p>
           <h2 className="mt-2 text-2xl font-bold">Productos y servicios</h2>
           <p className="mt-2 text-sm text-muted-foreground">Base reutilizable para construir cotizaciones sin capturar desde cero.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="hidden gap-2 sm:flex">
           <Button variant="secondary" disabled={!canManageCatalog} title={!canManageCatalog ? "Tu rol no permite importar catalogo" : undefined}><Upload className="h-4 w-4" />Importar CSV</Button>
           <Button disabled={!canManageCatalog} onClick={() => setModalOpen(true)} title={!canManageCatalog ? "Tu rol no permite crear items" : undefined}><Plus className="h-4 w-4" />Nuevo item</Button>
         </div>
@@ -74,10 +76,16 @@ export default function CatalogItemsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? <LoadingState title="Cargando catalogo" /> : null}
+          {isLoading ? <PageSkeleton variant="list" /> : null}
           {isError ? <ErrorState title="No se pudo cargar el catalogo" description="La API no respondio correctamente." onAction={() => void refetch()} /> : null}
           {!isLoading && !isError && data.length === 0 ? (
-            <EmptyState icon={Boxes} title="Catalogo vacio" description="Agrega productos o servicios cuando tu rol tenga permiso. El constructor los usara como base reutilizable." />
+            <EmptyState
+              icon={Boxes}
+              title="Catalogo vacio"
+              description="Agrega productos o servicios reutilizables para construir cotizaciones mas rapido."
+              action={canManageCatalog ? "Crear item" : undefined}
+              onAction={canManageCatalog ? () => setModalOpen(true) : undefined}
+            />
           ) : null}
           {!isLoading && !isError && data.length > 0 ? (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -110,12 +118,13 @@ export default function CatalogItemsPage() {
             <option value="false">Inactivo</option>
           </SelectField>
           <TextareaField label="Descripcion" className="sm:col-span-2" error={errors.description?.message} {...register("description")} />
-          <div className="flex items-end justify-end gap-2 sm:col-span-2">
+          <div className="grid gap-2 sm:col-span-2 sm:flex sm:items-end sm:justify-end">
             <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>Cancelar</Button>
             <Button loading={mutation.isPending}>Guardar item</Button>
           </div>
         </form>
       </Modal>
+      <MobileFab icon={Plus} label="Nuevo" onClick={() => setModalOpen(true)} disabled={!canManageCatalog} />
     </div>
   )
 }

@@ -3,6 +3,8 @@ export const routes = {
   login: "/login",
   register: "/registro",
   forgotPassword: "/recuperar-password",
+  verifyEmail: "/verificar-email",
+  resetPassword: "/restablecer-password",
   app: "/app",
   dashboard: "/app/dashboard",
   quotes: "/app/quotes",
@@ -13,5 +15,8 @@ export const routes = {
   catalogCategories: "/app/catalog/categories",
   reports: "/app/reports",
   settingsCompany: "/app/settings/company",
+  settingsTeam: "/app/settings/team",
+  settingsBilling: "/app/settings/billing",
+  settingsIntegrations: "/app/settings/integrations",
   publicQuote: "/q/demo-token",
 } as const
