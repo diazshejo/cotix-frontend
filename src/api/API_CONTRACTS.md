@@ -1,25 +1,30 @@
 # Cotix Frontend API Contracts
 
-Base URL local: `http://127.0.0.1:8000/api`
+Base URL local: `http://localhost:8000/api`
 
-Estado de integración: este documento refleja los contratos reales observados en `C:\py\Cotix\backend` mediante `config/urls.py`, serializers y viewsets.
+Estado de integración: contratos de la API Django usados por el frontend React.
 
 ## Auth
+
+Las peticiones envían cookies con `withCredentials`. Antes de cualquier POST/PATCH/PUT/DELETE, el frontend obtiene el token de `GET /auth/csrf/` y lo envía en `X-CSRFToken`. Los JWT de sesión no aparecen en JSON ni se almacenan en JavaScript.
+
+### GET `/auth/csrf/`
+Response: `{ "csrf_token": "..." }`. También establece una cookie CSRF `HttpOnly`.
 
 ### POST `/auth/login/`
 Backend: `LoginView(TokenObtainPairView)`.
 
 Request:
 ```json
-{ "email": "admin@empresa.gt", "password": "password123" }
+{ "email": "admin@empresa.gt", "password": "UnaClaveSegura!2026" }
 ```
 
-Response real SimpleJWT:
+Response:
 ```json
-{ "access": "jwt-access-token" }
+{ "ok": true }
 ```
 
-Cookie: el backend guarda el refresh token en `cotix_refresh` con `HttpOnly`, `SameSite` configurable, `Secure` configurable por entorno y `Path=/api/auth/`. El refresh token no se expone en JSON.
+Cookies: el backend guarda el acceso en `cotix_access` (`Path=/api/`) y la renovación en `cotix_refresh` (`Path=/api/auth/`). Ambas son `HttpOnly`, `SameSite=Lax` y `Secure` en producción.
 
 Nota frontend: después de login, el frontend llama `GET /auth/me/` para obtener usuario.
 
@@ -49,26 +54,23 @@ Request:
   "trade_name": "Empresa",
   "nit": "1234567-8",
   "email": "admin@empresa.gt",
-  "password": "password123",
+  "password": "UnaClaveSegura!2026",
   "first_name": "",
   "last_name": ""
 }
 ```
 
-Response real: `UserSerializer`, no tokens. El frontend hace login automático después de registrar.
+Response: `UserSerializer`, sin tokens. El usuario debe verificar el correo antes de iniciar sesión.
 
 ### POST `/auth/refresh/`
 
 Request: sin body. El backend lee el refresh token desde la cookie `HttpOnly`.
 
-Response:
-```json
-{ "access": "jwt-access-token" }
-```
+Response: `{ "ok": true }`; actualiza la cookie de acceso `HttpOnly`.
 
 ### POST `/auth/logout/`
 
-Limpia la cookie de refresh. Response:
+Revoca la sesión y limpia ambas cookies. Response:
 ```json
 { "ok": true }
 ```

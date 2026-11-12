@@ -109,7 +109,6 @@ export default function BillingPage() {
   const [interval, setInterval] = useState<BillingInterval>("monthly")
 
   const user = useAuthStore((s) => s.user)
-  const accessToken = useAuthStore((s) => s.accessToken)
   const setSession = useAuthStore((s) => s.setSession)
   const currentPlan = user?.tenantPlan ?? "free"
   const isPaid = currentPlan !== "free"
@@ -124,13 +123,13 @@ export default function BillingPage() {
     const timer = setTimeout(async () => {
       try {
         const freshUser = await getMe()
-        setSession(accessToken!, freshUser)
+        setSession(freshUser)
       } catch {
         // silent — plan badge will update on next natural refresh
       }
     }, 3000)
     return () => clearTimeout(timer)
-  }, [success, accessToken, setSession])
+  }, [success, setSession])
 
   const checkoutMutation = useMutation({
     mutationFn: ({ plan, iv }: { plan: string; iv: BillingInterval }) =>

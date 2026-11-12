@@ -1,6 +1,6 @@
-import axios from "axios"
+import axios, { type InternalAxiosRequestConfig } from "axios"
 
-const API_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api"
+const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api"
 
 export const apiClient = axios.create({
   baseURL: API_URL,
@@ -14,34 +14,40 @@ export const credentialClient = axios.create({
   timeout: 12000,
 })
 
-let accessToken: string | null = null
+let csrfToken: string | null = null
+let csrfRequest: Promise<string> | null = null
+let refreshRequest: Promise<void> | null = null
 let onUnauthorized: (() => void) | null = null
 
-export function setAccessToken(token: string | null) {
-  accessToken = token
-}
-
-export function getAccessToken() {
-  return accessToken
+async function ensureCsrfToken(): Promise<string> {
+  if (csrfToken) return csrfToken
+  csrfRequest ??= credentialClient.get<{ csrf_token: string }>("/auth/csrf/").then((response) => response.data.csrf_token)
+  try {
+    csrfToken = await csrfRequest
+    return csrfToken
+  } finally {
+    csrfRequest = null
+  }
 }
 
 export function setUnauthorizedHandler(handler: (() => void) | null) {
   onUnauthorized = handler
 }
 
-export async function refreshAccessToken() {
-  const response = await credentialClient.post<{ access: string }>("/auth/refresh/")
-  setAccessToken(response.data.access)
-  return response.data.access
+export async function refreshSessionCookie() {
+  refreshRequest ??= credentialClient.post("/auth/refresh/").then(() => undefined).finally(() => { refreshRequest = null })
+  return refreshRequest
 }
 
-apiClient.interceptors.request.use((config) => {
-  if (accessToken) {
-    config.headers.Authorization = `Bearer ${accessToken}`
+async function attachCsrfToken(config: InternalAxiosRequestConfig) {
+  if (config.method && !["get", "head", "options"].includes(config.method.toLowerCase())) {
+    config.headers.set("X-CSRFToken", await ensureCsrfToken())
   }
-
   return config
-})
+}
+
+apiClient.interceptors.request.use(attachCsrfToken)
+credentialClient.interceptors.request.use(attachCsrfToken)
 
 apiClient.interceptors.response.use(
   (response) => response,
@@ -52,11 +58,9 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true
 
       try {
-        const access = await refreshAccessToken()
-        originalRequest.headers.Authorization = `Bearer ${access}`
+        await refreshSessionCookie()
         return apiClient(originalRequest)
       } catch {
-        setAccessToken(null)
         onUnauthorized?.()
       }
     }
@@ -86,7 +90,7 @@ export function isPlanRestriction(error: unknown): boolean {
 }
 
 export async function withMockFallback<T>(request: Promise<T>, fallback: T): Promise<T> {
-  if (import.meta.env.VITE_USE_MOCKS === "false") return request
+  if (import.meta.env.VITE_USE_MOCKS !== "true") return request
 
   try {
     return await request

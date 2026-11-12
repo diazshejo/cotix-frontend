@@ -21,14 +21,14 @@ beforeEach(() => {
 describe("authStore cache isolation", () => {
   it("removes one account's cached data before another account signs in", () => {
     queryClient.setQueryData(["quotes"], ["tenant-a quote"])
-    useAuthStore.getState().setSession("token-b", { ...user, id: "2", tenantId: "tenant-b" })
+    useAuthStore.getState().setSession({ ...user, id: "2", tenantId: "tenant-b" })
 
     expect(queryClient.getQueryData(["quotes"])).toBeUndefined()
     expect(useAuthStore.getState().user?.tenantId).toBe("tenant-b")
   })
 
   it("removes cached data on logout", () => {
-    useAuthStore.getState().setSession("token-a", user)
+    useAuthStore.getState().setSession(user)
     queryClient.setQueryData(["quotes"], ["tenant-a quote"])
     useAuthStore.getState().clearSession()
 

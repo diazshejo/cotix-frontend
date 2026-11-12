@@ -45,7 +45,7 @@ npm run preview
 ## Variables de entorno
 
 ```ini
-VITE_API_URL=http://127.0.0.1:8000/api
+VITE_API_URL=http://localhost:8000/api
 VITE_APP_URL=http://localhost:5173
 VITE_USE_MOCKS=false
 ```
@@ -84,14 +84,14 @@ La navegacion se oculta segun rol y `ProtectedRoute` bloquea acceso directo a re
 
 ## Auth
 
-El access token vive solo en memoria. Django guarda el refresh token en una cookie `HttpOnly`; el frontend no lee ni guarda refresh tokens en `localStorage`.
+El backend guarda los tokens de acceso y renovación en cookies `HttpOnly` y `SameSite`. El frontend no lee ni guarda JWT. Para operaciones de escritura obtiene un token CSRF con `GET /auth/csrf/` y lo envía en `X-CSRFToken`.
 
 Flujo:
 
-1. Login llama `POST /auth/login/`.
-2. Login recibe solo el access token y luego llama `GET /auth/me/`.
+1. Login obtiene el token CSRF y llama `POST /auth/login/`.
+2. Login recibe las cookies de sesión y luego llama `GET /auth/me/`.
 3. Bootstrap llama `POST /auth/refresh/` con cookies y luego `GET /auth/me/`.
-4. Logout llama `POST /auth/logout/` y el backend limpia la cookie.
+4. Logout llama `POST /auth/logout/` y el backend revoca la sesión y limpia las cookies.
 5. Sesion vencida limpia estado y muestra mensaje.
 6. Login/logout/sesion vencida se sincronizan entre pestanas con `BroadcastChannel` y fallback `storage`.
 

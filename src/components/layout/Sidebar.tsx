@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { logout } from "@/api/auth"
+import { getApiErrorMessage } from "@/api/client"
 import { getMonthlyQuotaUsage } from "@/api/quotes"
 import { Button } from "@/components/ui/Button"
 import { useConfirm } from "@/components/common/ConfirmDialog"
@@ -143,12 +144,13 @@ export function MobileSidebar({ open, onClose }: { open: boolean; onClose: () =>
   const confirm = useConfirm()
   const logoutMutation = useMutation({
     mutationFn: logout,
-    onSettled: () => {
+    onSuccess: () => {
       clearSession()
       publishSessionEvent("logout")
       toast.info("Sesion cerrada.")
       onClose()
     },
+    onError: (error) => toast.error(getApiErrorMessage(error)),
   })
 
   async function requestLogout() {

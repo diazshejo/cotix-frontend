@@ -6,7 +6,7 @@ import { useAuthStore } from "@/stores/authStore"
 
 describe("ProtectedRoute", () => {
   beforeEach(() => {
-    useAuthStore.setState({ accessToken: null, user: null, status: "guest" })
+    useAuthStore.setState({ user: null, status: "guest" })
   })
 
   it("does not render protected content for guests", () => {

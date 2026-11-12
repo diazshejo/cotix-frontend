@@ -29,8 +29,8 @@ export default function LoginPage() {
   })
   const mutation = useMutation({
     mutationFn: login,
-    onSuccess: (session) => {
-      setSession(session.access, session.user)
+    onSuccess: (user) => {
+      setSession(user)
       publishSessionEvent("login")
       toast.success("Sesion iniciada.")
       navigate(from, { replace: true })

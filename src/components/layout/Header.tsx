@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query"
 import { Menu, Plus, Search } from "lucide-react"
 import { toast } from "sonner"
 import { logout } from "@/api/auth"
+import { getApiErrorMessage } from "@/api/client"
 import { Button } from "@/components/ui/Button"
 import { useConfirm } from "@/components/common/ConfirmDialog"
 import { routes } from "@/constants/routes"
@@ -31,11 +32,12 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const hasPageFab = pageFabRoutes.includes(pathname)
   const logoutMutation = useMutation({
     mutationFn: logout,
-    onSettled: () => {
+    onSuccess: () => {
       clearSession()
       publishSessionEvent("logout")
       toast.info("Sesion cerrada.")
     },
+    onError: (error) => toast.error(getApiErrorMessage(error)),
   })
   const canCreateQuote = canPerform(user?.role, "create")
 

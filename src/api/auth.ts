@@ -1,4 +1,4 @@
-import { apiClient, credentialClient, refreshAccessToken, setAccessToken } from "@/api/client"
+import { apiClient, credentialClient, refreshSessionCookie } from "@/api/client"
 import type { AuthUser, TenantPlan, TenantStatus, UserRole } from "@/types/user"
 
 export interface BackendUserDto {
@@ -18,11 +18,6 @@ export interface BackendUserDto {
     trial_ends_at?: string
     trial_expired?: boolean
   }
-}
-
-export interface AuthResponseDto {
-  access: string
-  user: BackendUserDto
 }
 
 export interface LoginRequestDto {
@@ -61,10 +56,8 @@ function mapUser(dto: BackendUserDto): AuthUser {
 }
 
 export async function login(payload: LoginRequestDto) {
-  const response = await credentialClient.post<{ access: string }>("/auth/login/", payload)
-  setAccessToken(response.data.access)
-  const user = await getMe()
-  return { access: response.data.access, user }
+  await credentialClient.post("/auth/login/", payload)
+  return getMe()
 }
 
 export async function register(payload: RegisterRequestDto): Promise<RegisterResult> {
@@ -93,7 +86,7 @@ export async function resetPassword(token: string, password: string, confirmPass
 }
 
 export async function refreshSession() {
-  return refreshAccessToken()
+  return refreshSessionCookie()
 }
 
 export async function getMe() {
@@ -102,6 +95,5 @@ export async function getMe() {
 }
 
 export async function logout() {
-  await credentialClient.post("/auth/logout/").catch(() => undefined)
-  setAccessToken(null)
+  await credentialClient.post("/auth/logout/")
 }

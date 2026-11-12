@@ -1,6 +1,6 @@
 import { ReactNode, useEffect } from "react"
 import { getMe, refreshSession } from "@/api/auth"
-import { setAccessToken, setUnauthorizedHandler } from "@/api/client"
+import { setUnauthorizedHandler } from "@/api/client"
 import { useAuthStore } from "@/stores/authStore"
 import { publishSessionEvent, subscribeSessionEvents } from "@/utils/sessionSync"
 import { toast } from "sonner"
@@ -14,7 +14,6 @@ export function AuthBootstrap({ children }: { children: ReactNode }) {
     let cancelled = false
 
     setUnauthorizedHandler(() => {
-      setAccessToken(null)
       clearSession()
       publishSessionEvent("expired")
       toast.error("Tu sesion vencio. Inicia sesion nuevamente.")
@@ -23,9 +22,9 @@ export function AuthBootstrap({ children }: { children: ReactNode }) {
     async function boot() {
       setChecking()
       try {
-        const access = await refreshSession()
+        await refreshSession()
         const user = await getMe()
-        if (!cancelled) setSession(access, user)
+        if (!cancelled) setSession(user)
       } catch {
         if (!cancelled) clearSession()
       }
@@ -34,7 +33,6 @@ export function AuthBootstrap({ children }: { children: ReactNode }) {
     void boot()
     const unsubscribe = subscribeSessionEvents((event) => {
       if (event === "logout" || event === "expired") {
-        setAccessToken(null)
         clearSession()
         if (event === "expired") toast.error("Tu sesion vencio en otra pestana.")
       }

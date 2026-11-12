@@ -3,25 +3,23 @@ import { create } from "zustand"
 import type { AuthUser } from "@/types/user"
 
 interface AuthState {
-  accessToken: string | null
   user: AuthUser | null
   status: "idle" | "checking" | "authenticated" | "guest"
   setChecking: () => void
-  setSession: (accessToken: string, user: AuthUser) => void
+  setSession: (user: AuthUser) => void
   clearSession: () => void
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  accessToken: null,
   user: null,
   status: "idle",
   setChecking: () => set({ status: "checking" }),
-  setSession: (accessToken, user) => {
+  setSession: (user) => {
     queryClient.clear()
-    set({ accessToken, user, status: "authenticated" })
+    set({ user, status: "authenticated" })
   },
   clearSession: () => {
     queryClient.clear()
-    set({ accessToken: null, user: null, status: "guest" })
+    set({ user: null, status: "guest" })
   },
 }))
