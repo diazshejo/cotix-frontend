@@ -7,6 +7,7 @@ const label: Record<QuoteStatus, string> = {
   viewed: "Vista",
   accepted: "Aceptada",
   rejected: "Rechazada",
+  changes_requested: "Cambios solicitados",
   expired: "Vencida",
 }
 
@@ -16,6 +17,7 @@ const tone: Record<QuoteStatus, string> = {
   viewed: "bg-cyan-100 text-cyan-800",
   accepted: "bg-emerald-100 text-emerald-700",
   rejected: "bg-rose-100 text-rose-700",
+  changes_requested: "bg-violet-100 text-violet-700",
   expired: "bg-amber-100 text-amber-800",
 }
 

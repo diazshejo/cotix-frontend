@@ -34,7 +34,7 @@ const features = [
     icon: Eye,
     title: "Portal de cliente sin fricción",
     description:
-      "Tu cliente recibe un enlace y acepta o rechaza la cotización online sin necesidad de crear cuenta ni instalar nada.",
+      "Tu cliente recibe un enlace y puede firmar la aceptación, rechazar o solicitar cambios sin crear cuenta ni instalar nada.",
   },
   {
     icon: Package,
@@ -44,9 +44,9 @@ const features = [
   },
   {
     icon: Shield,
-    title: "Firma y aceptación digital",
+    title: "Firma electrónica con evidencia",
     description:
-      "Rastrea con precisión cuándo el cliente vio, abrió y respondió tu propuesta. Nunca más el clásico \"no me llegó\".",
+      "Registra el nombre, el trazo, el consentimiento y la versión exacta de la propuesta aceptada.",
   },
   {
     icon: Palette,
@@ -96,7 +96,7 @@ const faqs = [
   },
   {
     q: "¿Cómo ve el cliente la cotización?",
-    a: "Recibirá un enlace único (sin contraseña) que abre un portal web profesional. Ahí puede ver todos los detalles, descargar el PDF y hacer clic en 'Aceptar' o 'Rechazar'. Tú recibirás una notificación instantánea.",
+    a: "Recibirá un enlace único (sin contraseña) que abre un portal web profesional. Ahí puede ver los detalles, descargar el PDF, firmar su aceptación, rechazar o solicitar cambios. Tú recibirás una notificación.",
   },
   {
     q: "¿Funciona para freelancers individuales y para empresas con equipo?",
@@ -664,7 +664,7 @@ export default function LandingPage() {
                     "Todo lo del plan Básico",
                     "Reportes avanzados de pipeline",
                     "Catálogo con integraciones",
-                    "Firma y aceptación digital",
+                    "Firma electrónica con evidencia",
                     "Soporte prioritario",
                   ].map((feat) => (
                     <li key={feat} className="flex items-start gap-2.5 text-sm text-slate-300">

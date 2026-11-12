@@ -69,6 +69,7 @@ export default function QuotesListPage() {
               <option value="viewed">Vista</option>
               <option value="accepted">Aceptada</option>
               <option value="rejected">Rechazada</option>
+              <option value="changes_requested">Cambios solicitados</option>
             </select>
             <Button variant="secondary" onClick={() => { setSearch(""); setStatus(""); setPage(1) }}>
               <Filter className="h-4 w-4" />

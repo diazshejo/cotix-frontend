@@ -1,4 +1,14 @@
-export type QuoteStatus = "draft" | "sent" | "viewed" | "accepted" | "rejected" | "expired"
+export type QuoteStatus = "draft" | "sent" | "viewed" | "accepted" | "rejected" | "changes_requested" | "expired"
+
+export type SignaturePoint = { x: number; y: number }
+export type SignatureStrokes = SignaturePoint[][]
+
+export interface QuoteAcceptance {
+  signerName: string
+  signedAt: string
+  snapshotSha256: string
+  signatureStrokes?: SignatureStrokes
+}
 
 export interface QuoteItem {
   id: string
@@ -34,6 +44,11 @@ export interface Quote {
   publicToken?: string
   notes?: string
   termsConditions?: string
+  changeRequestMessage?: string
+  revisionOf?: string | null
+  revisionIds?: string[]
+  acceptance?: QuoteAcceptance | null
+  consentText?: string
   companyName?: string
   companyCity?: string
   companyDepartment?: string

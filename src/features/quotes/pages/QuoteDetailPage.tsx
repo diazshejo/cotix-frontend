@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Copy, Download, Pencil, Send } from "lucide-react"
-import { Link, useParams } from "react-router-dom"
+import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { downloadQuotePdf, getQuote, publishQuote, sendQuote } from "@/api/quotes"
+import { downloadQuotePdf, duplicateQuote, getQuote, publishQuote, sendQuote } from "@/api/quotes"
 import { getApiErrorMessage } from "@/api/client"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { useConfirm } from "@/components/common/ConfirmDialog"
@@ -15,10 +15,12 @@ import { formatCurrency } from "@/utils/currency"
 import { calculateQuoteTotals } from "@/utils/quoteCalculator"
 import { useAuthStore } from "@/stores/authStore"
 import { canPerform } from "@/utils/permissions"
+import { SignaturePad } from "@/features/public/pages/SignaturePad"
 
 export default function QuoteDetailPage() {
   const { id = "" } = useParams()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const confirm = useConfirm()
   const role = useAuthStore((state) => state.user?.role)
   const { data: quote, isLoading, isError, refetch } = useQuery({
@@ -54,6 +56,15 @@ export default function QuoteDetailPage() {
       link.click()
       URL.revokeObjectURL(url)
       toast.success("PDF descargado.")
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error)),
+  })
+  const revisionMutation = useMutation({
+    mutationFn: duplicateQuote,
+    onSuccess: (revision) => {
+      void queryClient.invalidateQueries({ queryKey: ["quotes"] })
+      toast.success("Nueva versión creada. Revisa los cambios antes de enviarla.")
+      navigate(routes.editQuote(revision.id))
     },
     onError: (error) => toast.error(getApiErrorMessage(error)),
   })
@@ -103,11 +114,21 @@ export default function QuoteDetailPage() {
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex">
           {quote.status === "draft" && <Link className="focus-ring inline-flex h-10 min-h-11 items-center justify-center gap-2 rounded-md border border-border bg-white px-4 text-sm font-semibold text-foreground hover:bg-muted sm:min-h-10" to={routes.editQuote(quote.id)}><Pencil className="h-4 w-4" />Editar</Link>}
+          {quote.status === "changes_requested" && canPerform(role, "edit") && <Button variant="secondary" loading={revisionMutation.isPending} onClick={() => revisionMutation.mutate(quote.id)}><Pencil className="h-4 w-4" />Crear nueva versión</Button>}
           <Button variant="secondary" disabled={!publicUrl || (quote.status === "draft" && !canPerform(role, "sendQuote"))} loading={publishMutation.isPending} onClick={copyPublicLink}><Copy className="h-4 w-4" />Link</Button>
           <Button variant="secondary" loading={pdfMutation.isPending} onClick={() => pdfMutation.mutate(quote.id)}><Download className="h-4 w-4" />PDF</Button>
           <Button disabled={quote.status !== "draft"} loading={sendMutation.isPending} onClick={() => sendMutation.mutate(quote.id)}><Send className="h-4 w-4" />Enviar</Button>
         </div>
       </div>
+
+      {quote.revisionOf && <p className="text-sm text-muted-foreground">Nueva versión de <Link className="font-semibold text-primary hover:underline" to={routes.quoteDetail(quote.revisionOf)}>la cotización anterior</Link>.</p>}
+      {Boolean(quote.revisionIds?.length) && <p className="text-sm text-muted-foreground">Versiones posteriores: {quote.revisionIds?.map((revisionId, index) => <span key={revisionId}>{index > 0 ? ", " : ""}<Link className="font-semibold text-primary hover:underline" to={routes.quoteDetail(revisionId)}>{index + 2}</Link></span>)}</p>}
+      {quote.status === "changes_requested" && (
+        <Card><CardContent className="p-5"><h3 className="font-semibold">Cambios solicitados por el cliente</h3><p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{quote.changeRequestMessage}</p></CardContent></Card>
+      )}
+      {quote.acceptance && (
+        <Card><CardContent className="space-y-3 p-5"><h3 className="font-semibold">Aceptación con firma electrónica</h3><p className="text-sm">Firmó <strong>{quote.acceptance.signerName}</strong> el {new Date(quote.acceptance.signedAt).toLocaleString("es-GT")}.</p>{quote.acceptance.signatureStrokes && <div className="max-w-md"><SignaturePad value={quote.acceptance.signatureStrokes} readOnly /></div>}<p className="break-all text-xs text-muted-foreground">Huella SHA-256 de la propuesta aceptada: {quote.acceptance.snapshotSha256}</p></CardContent></Card>
+      )}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <Card>

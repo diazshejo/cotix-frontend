@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Check, Download, X } from "lucide-react"
-import { useEffect } from "react"
+import { Check, Download, MessageSquare, X } from "lucide-react"
+import { useEffect, useState } from "react"
 import { useParams } from "react-router-dom"
 import { toast } from "sonner"
 import { getApiErrorMessage } from "@/api/client"
-import { acceptPublicQuote, downloadPublicQuotePdf, getPublicQuote, rejectPublicQuote } from "@/api/quotes"
+import { acceptPublicQuote, downloadPublicQuotePdf, getPublicQuote, rejectPublicQuote, requestPublicQuoteChanges } from "@/api/quotes"
 import { applyBrandColor } from "@/utils/color"
 import { useConfirm } from "@/components/common/ConfirmDialog"
 import { ErrorState, LoadingState } from "@/components/common/StateBlock"
@@ -13,11 +13,18 @@ import { Card, CardContent } from "@/components/ui/Card"
 import { queryKeys } from "@/constants/queryKeys"
 import { formatCurrency } from "@/utils/currency"
 import { calculateQuoteTotals } from "@/utils/quoteCalculator"
+import type { SignatureStrokes } from "@/types/quote"
+import { SignaturePad } from "./SignaturePad"
 
 export default function PublicQuotePage() {
   const { token = "" } = useParams()
   const queryClient = useQueryClient()
   const confirm = useConfirm()
+  const [responseMode, setResponseMode] = useState<"sign" | "changes" | null>(null)
+  const [signerName, setSignerName] = useState("")
+  const [signatureStrokes, setSignatureStrokes] = useState<SignatureStrokes>([])
+  const [consent, setConsent] = useState(false)
+  const [changeMessage, setChangeMessage] = useState("")
   const { data: quote, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.publicQuote(token),
     queryFn: () => getPublicQuote(token),
@@ -28,9 +35,14 @@ export default function PublicQuotePage() {
   }, [quote?.companyPrimaryColor])
 
   const respondMutation = useMutation({
-    mutationFn: (decision: "accept" | "reject") => (decision === "accept" ? acceptPublicQuote(token) : rejectPublicQuote(token)),
+    mutationFn: (decision: "accept" | "reject" | "changes") => {
+      if (decision === "accept") return acceptPublicQuote(token, signerName.trim(), signatureStrokes)
+      if (decision === "changes") return requestPublicQuoteChanges(token, changeMessage.trim())
+      return rejectPublicQuote(token)
+    },
     onSuccess: (updatedQuote) => {
-      toast.success(updatedQuote.status === "accepted" ? "Cotizacion aceptada." : "Respuesta registrada.")
+      toast.success(updatedQuote.status === "accepted" ? "Cotización firmada y aceptada." : "Respuesta registrada.")
+      setResponseMode(null)
       queryClient.setQueryData(queryKeys.publicQuote(token), updatedQuote)
     },
     onError: (error) => toast.error(getApiErrorMessage(error)),
@@ -177,21 +189,44 @@ export default function PublicQuotePage() {
           <section className="mt-6 rounded-lg border border-border bg-white p-5 text-center">
             {canRespond ? (
               <>
-                <h2 className="text-lg font-bold">Esta cotizacion es de tu interes?</h2>
+                <h2 className="text-lg font-bold">¿Esta cotización es de tu interés?</h2>
                 <div className="mt-5 flex flex-col justify-center gap-3 sm:flex-row">
-                  <Button variant="success" loading={respondMutation.isPending} onClick={() => respondMutation.mutate("accept")}><Check className="h-4 w-4" />Aceptar cotizacion</Button>
+                  <Button variant="success" disabled={respondMutation.isPending} onClick={() => setResponseMode("sign")}><Check className="h-4 w-4" />Firmar y aceptar</Button>
+                  <Button variant="secondary" disabled={respondMutation.isPending} onClick={() => setResponseMode("changes")}><MessageSquare className="h-4 w-4" />Solicitar cambios</Button>
                   <Button variant="danger" loading={respondMutation.isPending} onClick={rejectQuote}><X className="h-4 w-4" />Rechazar</Button>
                   <Button variant="secondary" loading={pdfMutation.isPending} onClick={() => pdfMutation.mutate()}><Download className="h-4 w-4" />Descargar PDF</Button>
                 </div>
+                {responseMode === "sign" && (
+                  <form className="mx-auto mt-6 max-w-xl space-y-4 rounded-lg border border-border bg-slate-50 p-5 text-left" onSubmit={(event) => { event.preventDefault(); respondMutation.mutate("accept") }}>
+                    <h3 className="font-semibold">Firma electrónica de aceptación</h3>
+                    <p className="text-sm text-muted-foreground">Revisa el importe y los términos antes de firmar. Esta aceptación quedará registrada con la versión exacta de la cotización.</p>
+                    <label className="block text-sm font-medium">Nombre completo
+                      <input className="field mt-1 w-full" autoComplete="name" minLength={2} maxLength={120} required value={signerName} onChange={(event) => setSignerName(event.target.value)} />
+                    </label>
+                    <div><p className="mb-1 text-sm font-medium">Dibuja tu firma</p><SignaturePad value={signatureStrokes} onChange={setSignatureStrokes} /></div>
+                    <label className="flex gap-2 text-sm"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} required disabled={!quote.consentText} /><span>{quote.consentText || "El consentimiento no está disponible. Inténtalo de nuevo más tarde."}</span></label>
+                    <div className="flex gap-2"><Button type="submit" variant="success" loading={respondMutation.isPending} disabled={!quote.consentText || !consent || signerName.trim().length < 2 || signatureStrokes.flat().length < 8}>Confirmar aceptación</Button><Button type="button" variant="secondary" onClick={() => setResponseMode(null)}>Cancelar</Button></div>
+                  </form>
+                )}
+                {responseMode === "changes" && (
+                  <form className="mx-auto mt-6 max-w-xl space-y-4 rounded-lg border border-border bg-slate-50 p-5 text-left" onSubmit={(event) => { event.preventDefault(); respondMutation.mutate("changes") }}>
+                    <h3 className="font-semibold">Solicitar cambios</h3>
+                    <p className="text-sm text-muted-foreground">Explica qué deseas ajustar. El equipo comercial recibirá tu mensaje y podrá enviarte una nueva versión.</p>
+                    <textarea className="field w-full" rows={4} minLength={10} maxLength={2000} required value={changeMessage} onChange={(event) => setChangeMessage(event.target.value)} />
+                    <div className="flex gap-2"><Button type="submit" loading={respondMutation.isPending} disabled={changeMessage.trim().length < 10}>Enviar solicitud</Button><Button type="button" variant="secondary" onClick={() => setResponseMode(null)}>Cancelar</Button></div>
+                  </form>
+                )}
               </>
             ) : (
               <>
-                <h2 className="text-lg font-bold">{quote.status === "accepted" ? "Gracias. Has aceptado esta cotizacion." : "Respuesta registrada"}</h2>
+                <h2 className="text-lg font-bold">{quote.status === "accepted" ? "Gracias. Has firmado y aceptado esta cotización." : quote.status === "changes_requested" ? "Tu solicitud de cambios fue enviada." : "Respuesta registrada"}</h2>
                 <p className="mt-2 text-sm text-muted-foreground">
                   {quote.status === "accepted"
                     ? "El equipo comercial se pondra en contacto contigo pronto."
-                    : "Esta cotizacion ya no requiere una accion adicional."}
+                    : quote.status === "changes_requested" ? "El equipo comercial revisará tu solicitud y podrá enviarte una nueva cotización." : "Esta cotización ya no requiere una acción adicional."}
                 </p>
+                {quote.status === "accepted" && quote.acceptance && <p className="mt-3 text-sm text-muted-foreground">Firma registrada a nombre de <strong>{quote.acceptance.signerName}</strong> el {new Date(quote.acceptance.signedAt).toLocaleString("es-GT")}.</p>}
+                {quote.status === "changes_requested" && quote.changeRequestMessage && <p className="mx-auto mt-3 max-w-xl whitespace-pre-wrap rounded-md bg-slate-50 p-3 text-left text-sm">{quote.changeRequestMessage}</p>}
                 <Button className="mt-5" variant="secondary" loading={pdfMutation.isPending} onClick={() => pdfMutation.mutate()}><Download className="h-4 w-4" />Descargar PDF</Button>
               </>
             )}

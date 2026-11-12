@@ -1,4 +1,4 @@
-export type NotificationType = "quote_accepted" | "quote_rejected" | "quote_viewed" | "quote_sent"
+export type NotificationType = "quote_accepted" | "quote_rejected" | "quote_changes_requested" | "quote_viewed" | "quote_sent"
 
 export interface Notification {
   id: string

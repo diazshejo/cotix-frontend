@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Bell, Check, CheckCheck, Eye, Trash2, X } from "lucide-react"
+import { Bell, Check, CheckCheck, Eye, MessageSquare, Trash2, X } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { es } from "date-fns/locale"
 import {
@@ -20,6 +20,7 @@ import { cn } from "@/utils/cn"
 const ICON: Record<NotificationType, { icon: React.ReactNode; color: string }> = {
   quote_accepted: { icon: <Check className="h-3.5 w-3.5" />, color: "bg-emerald-100 text-emerald-600" },
   quote_rejected: { icon: <X className="h-3.5 w-3.5" />, color: "bg-red-100 text-red-500" },
+  quote_changes_requested: { icon: <MessageSquare className="h-3.5 w-3.5" />, color: "bg-violet-100 text-violet-600" },
   quote_viewed:   { icon: <Eye className="h-3.5 w-3.5" />, color: "bg-blue-100 text-blue-500" },
   quote_sent:     { icon: <Bell className="h-3.5 w-3.5" />, color: "bg-slate-100 text-slate-500" },
 }

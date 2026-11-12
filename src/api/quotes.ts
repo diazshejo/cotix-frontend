@@ -1,6 +1,6 @@
 import { apiClient, credentialClient, withMockFallback } from "@/api/client"
 import { quotes } from "@/data/mock"
-import type { Quote, QuoteItem, QuoteStatus } from "@/types/quote"
+import type { Quote, QuoteItem, QuoteStatus, SignatureStrokes } from "@/types/quote"
 
 export interface QuoteListParams {
   search?: string
@@ -30,7 +30,7 @@ export interface QuoteDto {
   id: string | number
   number?: string
   quote_number?: string
-  client: string | number | { id: string | number; name?: string; email?: string }
+  client?: string | number | { id: string | number; name?: string; email?: string }
   client_name?: string
   client_email?: string
   status: QuoteStatus
@@ -43,6 +43,16 @@ export interface QuoteDto {
   title?: string
   notes?: string
   terms_conditions?: string
+  change_request_message?: string
+  revision_of?: string | null
+  revision_ids?: string[]
+  acceptance?: {
+    signer_name: string
+    signed_at: string
+    snapshot_sha256: string
+    signature_strokes?: SignatureStrokes
+  } | null
+  consent_text?: string
   subtotal?: number | string
   discount_total?: number | string
   taxable_base?: number | string
@@ -100,7 +110,7 @@ function mapQuoteItem(dto: QuoteItemDto): QuoteItem {
 }
 
 function mapQuote(dto: QuoteDto): Quote {
-  const clientId = typeof dto.client === "object" ? String(dto.client.id) : String(dto.client)
+  const clientId = dto.client == null ? "" : typeof dto.client === "object" ? String(dto.client.id) : String(dto.client)
   const clientName =
     dto.client_name ?? (typeof dto.client === "object" ? dto.client.name : undefined) ?? `Cliente #${clientId}`
   const clientEmail = dto.client_email ?? (typeof dto.client === "object" ? dto.client.email : undefined) ?? ""
@@ -129,6 +139,16 @@ function mapQuote(dto: QuoteDto): Quote {
     publicToken: dto.public_token,
     notes: dto.notes ?? "",
     termsConditions: dto.terms_conditions ?? "",
+    changeRequestMessage: dto.change_request_message ?? "",
+    revisionOf: dto.revision_of ?? null,
+    revisionIds: dto.revision_ids ?? [],
+    acceptance: dto.acceptance ? {
+      signerName: dto.acceptance.signer_name,
+      signedAt: dto.acceptance.signed_at,
+      snapshotSha256: dto.acceptance.snapshot_sha256,
+      signatureStrokes: dto.acceptance.signature_strokes,
+    } : null,
+    consentText: dto.consent_text ?? "",
     companyName: dto.company_name ?? "",
     companyCity: dto.company_city ?? "",
     companyDepartment: dto.company_department ?? "",
@@ -201,6 +221,11 @@ export async function publishQuote(id: string) {
   return withMockFallback(response, fallback)
 }
 
+export async function duplicateQuote(id: string) {
+  const response = await apiClient.post<QuoteDto>(`/quotes/${id}/duplicate/`)
+  return mapQuote(response.data)
+}
+
 export async function downloadQuotePdf(id: string) {
   const response = await apiClient.get<Blob>(`/quotes/${id}/pdf/`, { responseType: "blob" })
   return response.data
@@ -211,14 +236,23 @@ export async function downloadPublicQuotePdf(token: string) {
   return response.data
 }
 
-export async function acceptPublicQuote(token: string) {
-  const response = credentialClient.post<{ status: QuoteStatus }>(`/public/quotes/${token}/respond/`, { response: "accepted" }).then(() => getPublicQuote(token))
+export async function acceptPublicQuote(token: string, signerName: string, signatureStrokes: SignatureStrokes) {
+  const response = credentialClient.post<{ status: QuoteStatus }>(`/public/quotes/${token}/respond/`, {
+    response: "accepted", signer_name: signerName, signature_strokes: signatureStrokes, consent: true,
+  }).then(() => getPublicQuote(token))
   return withMockFallback(response, { ...quotes[0], status: "accepted" })
 }
 
 export async function rejectPublicQuote(token: string) {
   const response = credentialClient.post<{ status: QuoteStatus }>(`/public/quotes/${token}/respond/`, { response: "rejected" }).then(() => getPublicQuote(token))
   return withMockFallback(response, { ...quotes[0], status: "rejected" })
+}
+
+export async function requestPublicQuoteChanges(token: string, message: string) {
+  const response = credentialClient.post<{ status: QuoteStatus }>(`/public/quotes/${token}/respond/`, {
+    response: "changes_requested", message,
+  }).then(() => getPublicQuote(token))
+  return withMockFallback(response, { ...quotes[0], status: "changes_requested", changeRequestMessage: message })
 }
 
 export interface MonthlyQuotaUsage {
