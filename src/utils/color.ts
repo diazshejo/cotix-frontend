@@ -27,3 +27,14 @@ export function applyBrandColor(hex: string) {
   document.documentElement.style.setProperty("--primary", hsl)
   document.documentElement.style.setProperty("--ring", hsl)
 }
+
+export function safeBrandColor(hex?: string): string {
+  return hex && /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex : "#1a6fdb"
+}
+
+export function brandForegroundColor(hex: string): string {
+  const channels = [1, 3, 5].map((index) => parseInt(hex.slice(index, index + 2), 16) / 255)
+  const linear = channels.map((value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4)
+  const luminance = 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+  return (luminance + 0.05) / 0.059 > 1.05 / (luminance + 0.05) ? "#0f172a" : "#ffffff"
+}

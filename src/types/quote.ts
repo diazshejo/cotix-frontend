@@ -55,6 +55,7 @@ export interface Quote {
   companyLogoUrl?: string
   companyPrimaryColor?: string
   companyWebsite?: string
+  companyFooterText?: string
   items: QuoteItem[]
 }
 

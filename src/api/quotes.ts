@@ -65,6 +65,7 @@ export interface QuoteDto {
   company_logo_url?: string
   company_primary_color?: string
   company_website?: string
+  company_footer_text?: string
   items?: QuoteItemDto[]
 }
 
@@ -155,6 +156,7 @@ function mapQuote(dto: QuoteDto): Quote {
     companyLogoUrl: dto.company_logo_url ?? "",
     companyPrimaryColor: dto.company_primary_color ?? "",
     companyWebsite: dto.company_website ?? "",
+    companyFooterText: dto.company_footer_text ?? "",
     items: (dto.items ?? []).map((item) => ({
       ...mapQuoteItem(item),
       taxRate: item.taxable === false ? 0 : Number(dto.tax_rate_snapshot ?? 0) / 100,

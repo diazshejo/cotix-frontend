@@ -115,8 +115,8 @@ export const companySettingsSchema = z.object({
   pricesIncludeTax: z.boolean(),
   quotePrefix: requiredText("El prefijo", 2),
   quoteDigits: z.coerce.number().min(3).max(8),
-  footerText: requiredText("El pie de pagina", 8),
-  defaultTerms: requiredText("Los terminos", 8),
+  footerText: z.string().trim().max(2000, "El pie de pagina no puede superar 2000 caracteres."),
+  defaultTerms: z.string().trim().max(10000, "Los terminos no pueden superar 10000 caracteres."),
 })
 
 export const createMemberSchema = z

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { loginSchema, quoteSchema } from "@/utils/validators"
+import { companySettingsSchema, loginSchema, quoteSchema } from "@/utils/validators"
 
 describe("validators", () => {
   it("rejects invalid login credentials", () => {
@@ -18,5 +18,11 @@ describe("validators", () => {
     })
 
     expect(result.success).toBe(false)
+  })
+
+  it("allows empty optional company text but bounds public footer length", () => {
+    const textSchema = companySettingsSchema.pick({ footerText: true, defaultTerms: true })
+    expect(textSchema.safeParse({ footerText: "", defaultTerms: "" }).success).toBe(true)
+    expect(textSchema.safeParse({ footerText: "x".repeat(2001), defaultTerms: "" }).success).toBe(false)
   })
 })

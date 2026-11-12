@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Check, Download, MessageSquare, X } from "lucide-react"
-import { useEffect, useState } from "react"
+import { type CSSProperties, useState } from "react"
 import { useParams } from "react-router-dom"
 import { toast } from "sonner"
 import { getApiErrorMessage } from "@/api/client"
 import { acceptPublicQuote, downloadPublicQuotePdf, getPublicQuote, rejectPublicQuote, requestPublicQuoteChanges } from "@/api/quotes"
-import { applyBrandColor } from "@/utils/color"
+import { brandForegroundColor, hexToHslVars, safeBrandColor } from "@/utils/color"
 import { useConfirm } from "@/components/common/ConfirmDialog"
 import { ErrorState, LoadingState } from "@/components/common/StateBlock"
 import { Button } from "@/components/ui/Button"
@@ -29,10 +29,6 @@ export default function PublicQuotePage() {
     queryKey: queryKeys.publicQuote(token),
     queryFn: () => getPublicQuote(token),
   })
-
-  useEffect(() => {
-    if (quote?.companyPrimaryColor) applyBrandColor(quote.companyPrimaryColor)
-  }, [quote?.companyPrimaryColor])
 
   const respondMutation = useMutation({
     mutationFn: (decision: "accept" | "reject" | "changes") => {
@@ -74,6 +70,14 @@ export default function PublicQuotePage() {
   }
 
   const totals = quote.totals ?? calculateQuoteTotals(quote.items, quote.taxRate === undefined ? undefined : quote.taxRate / 100, quote.pricesIncludeTax)
+  const brandColor = safeBrandColor(quote.companyPrimaryColor)
+  const brandForeground = brandForegroundColor(brandColor)
+  const brandHsl = hexToHslVars(brandColor)
+  const brandStyles = {
+    "--primary": brandHsl,
+    "--ring": brandHsl,
+    "--primary-foreground": brandForeground === "#ffffff" ? "0 0% 100%" : "222 47% 11%",
+  } as CSSProperties
   const canRespond = quote.status === "sent" || quote.status === "viewed"
   async function rejectQuote() {
     const confirmed = await confirm({
@@ -86,25 +90,27 @@ export default function PublicQuotePage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-4xl" style={brandStyles}>
       <Card className="overflow-hidden bg-white">
-        <div className="border-b border-border bg-slate-950 px-5 py-6 text-white sm:px-8">
+        <div className="border-b border-border px-5 py-6 sm:px-8" style={{ backgroundColor: brandColor, color: brandForeground }}>
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
             <div>
               <p className="text-xl font-bold">{quote.companyName || "Empresa"}</p>
               {(quote.companyCity || quote.companyDepartment) && (
-                <p className="mt-1 text-sm text-slate-300">
+                <p className="mt-1 text-sm opacity-80">
                   {[quote.companyCity, quote.companyDepartment].filter(Boolean).join(", ")}
                 </p>
               )}
               {quote.companyWebsite && (
-                <p className="mt-1 text-xs text-slate-400">{quote.companyWebsite}</p>
+                <p className="mt-1 text-xs opacity-80">{quote.companyWebsite}</p>
               )}
             </div>
             {quote.companyLogoUrl ? (
-              <img src={quote.companyLogoUrl} alt="Logo empresa" className="h-12 max-w-[160px] object-contain brightness-0 invert" />
+              <span className="flex min-h-14 max-w-[180px] items-center justify-center rounded-lg bg-white p-2">
+                <img src={quote.companyLogoUrl} alt={`Logo de ${quote.companyName || "la empresa"}`} className="max-h-12 max-w-[160px] object-contain" />
+              </span>
             ) : (
-              <div className="rounded-md bg-primary px-4 py-2 text-sm font-bold text-white">
+              <div className="rounded-md bg-white px-4 py-2 text-sm font-bold text-slate-900">
                 {quote.companyName?.slice(0, 5).toUpperCase() || "COTIX"}
               </div>
             )}
@@ -232,6 +238,12 @@ export default function PublicQuotePage() {
             )}
           </section>
         </CardContent>
+        {quote.companyFooterText && (
+          <footer className="border-t border-border px-5 py-5 text-sm text-muted-foreground sm:px-8">
+            <p className="font-semibold text-foreground">{quote.companyName}</p>
+            <p className="mt-1 whitespace-pre-line">{quote.companyFooterText}</p>
+          </footer>
+        )}
       </Card>
     </div>
   )
