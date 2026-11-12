@@ -1,6 +1,18 @@
 import { apiClient } from "@/api/client"
 import type { Notification, UnreadCountResponse } from "@/types/notification"
 
+export function notificationSocketUrl(
+  apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api",
+  siteOrigin = window.location.origin,
+): string {
+  const url = new URL(apiUrl, siteOrigin)
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:"
+  url.pathname = `${url.pathname.replace(/\/$/, "")}/notifications/ws/`
+  url.search = ""
+  url.hash = ""
+  return url.toString()
+}
+
 export async function fetchUnreadCount(): Promise<number> {
   const res = await apiClient.get<UnreadCountResponse>("/notifications/unread_count/")
   return res.data.unread_count

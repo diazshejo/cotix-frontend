@@ -8,6 +8,7 @@ import {
   clearAllNotifications,
   fetchRecentNotifications,
   fetchUnreadCount,
+  notificationSocketUrl,
   markAllAsRead,
   markAsRead,
 } from "@/api/notifications"
@@ -31,6 +32,7 @@ function timeAgo(iso: string) {
 
 export function NotificationBell() {
   const [open, setOpen] = useState(false)
+  const [live, setLive] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
   const qc = useQueryClient()
@@ -38,7 +40,7 @@ export function NotificationBell() {
   const { data: unread = 0 } = useQuery({
     queryKey: queryKeys.notificationsUnread,
     queryFn: fetchUnreadCount,
-    refetchInterval: 30_000,
+    refetchInterval: live ? 120_000 : 30_000,
     refetchIntervalInBackground: false,
   })
 
@@ -47,6 +49,8 @@ export function NotificationBell() {
     queryFn: fetchRecentNotifications,
     enabled: open,
     staleTime: 0,
+    refetchInterval: open && !live ? 30_000 : false,
+    refetchIntervalInBackground: false,
   })
 
   const markOneMutation = useMutation({
@@ -74,6 +78,62 @@ export function NotificationBell() {
   })
 
   useEffect(() => {
+    let socket: WebSocket | null = null
+    let retryTimer: ReturnType<typeof setTimeout> | null = null
+    let stopped = false
+    let attempts = 0
+
+    const refresh = () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.notificationsUnread })
+      void qc.invalidateQueries({ queryKey: queryKeys.notificationsRecent })
+    }
+
+    const connect = () => {
+      if (stopped || !navigator.onLine) return
+      socket = new WebSocket(notificationSocketUrl())
+      socket.onopen = () => {
+        attempts = 0
+        setLive(true)
+        refresh() // Reconcile notifications missed while disconnected.
+      }
+      socket.onmessage = (event) => {
+        try {
+          if (JSON.parse(event.data)?.type === "notification_changed") refresh()
+        } catch {
+          // Ignore malformed messages; REST remains authoritative.
+        }
+      }
+      socket.onclose = (event) => {
+        setLive(false)
+        if (stopped) return
+        if (event.code === 4401) refresh() // REST can renew an expired access cookie.
+        const delay = Math.min(30_000, 1000 * 2 ** Math.min(attempts++, 5))
+        retryTimer = setTimeout(connect, delay + Math.random() * 500)
+      }
+    }
+
+    const onOnline = () => {
+      if (retryTimer) clearTimeout(retryTimer)
+      if (!socket || socket.readyState === WebSocket.CLOSED) connect()
+      refresh()
+    }
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refresh()
+    }
+
+    connect()
+    window.addEventListener("online", onOnline)
+    document.addEventListener("visibilitychange", onVisible)
+    return () => {
+      stopped = true
+      if (retryTimer) clearTimeout(retryTimer)
+      socket?.close()
+      window.removeEventListener("online", onOnline)
+      document.removeEventListener("visibilitychange", onVisible)
+    }
+  }, [qc])
+
+  useEffect(() => {
     function onOutsideClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
@@ -98,7 +158,7 @@ export function NotificationBell() {
         onClick={() => setOpen((v) => !v)}
         aria-label={hasUnread ? `${unread} notificaciones sin leer` : "Notificaciones"}
         className={cn(
-          "focus-ring relative hidden h-10 w-10 items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition hover:bg-muted sm:inline-flex",
+          "focus-ring relative inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition hover:bg-muted",
           open && "bg-muted",
         )}
       >
@@ -112,7 +172,7 @@ export function NotificationBell() {
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute right-0 top-12 z-50 w-[360px] overflow-hidden rounded-xl border border-border bg-background shadow-xl">
+        <div className="absolute right-0 top-12 z-50 w-[calc(100vw-2rem)] max-w-[360px] overflow-hidden rounded-xl border border-border bg-background shadow-xl">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <div className="flex items-center gap-2">
