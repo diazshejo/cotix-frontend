@@ -9,6 +9,7 @@ export const routes = {
   dashboard: "/app/dashboard",
   quotes: "/app/quotes",
   newQuote: "/app/quotes/new",
+  editQuote: (id: string) => `/app/quotes/${id}/edit`,
   quoteDetail: (id: string) => `/app/quotes/${id}`,
   clients: "/app/clients",
   catalogItems: "/app/catalog/items",

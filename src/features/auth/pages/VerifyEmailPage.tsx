@@ -4,7 +4,6 @@ import { AlertCircle, CheckCircle, Loader2 } from "lucide-react"
 import { useEffect } from "react"
 import { verifyEmail } from "@/api/auth"
 import { getApiErrorMessage } from "@/api/client"
-import { Button } from "@/components/ui/Button"
 import { Card, CardContent } from "@/components/ui/Card"
 import { routes } from "@/constants/routes"
 
@@ -46,9 +45,7 @@ export default function VerifyEmailPage() {
               <p className="mt-3 text-sm leading-6 text-muted-foreground">
                 Tu cuenta está activa. Ya puedes ingresar a tu workspace.
               </p>
-              <Button asChild className="mt-6">
-                <Link to={routes.login}>Ir al inicio de sesión</Link>
-              </Button>
+              <Link to={routes.login} className="focus-ring inline-flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-semibold transition bg-primary text-primary-foreground hover:bg-primary/92 shadow-sm mt-6">Ir al inicio de sesión</Link>
             </>
           )}
 
@@ -61,9 +58,7 @@ export default function VerifyEmailPage() {
                   "El enlace de verificación expiró o ya fue utilizado. Solicita uno nuevo."}
               </p>
               <div className="mt-6 flex flex-col gap-3">
-                <Button asChild variant="outline">
-                  <Link to={routes.login}>Iniciar sesión</Link>
-                </Button>
+                <Link to={routes.login} className="focus-ring inline-flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-semibold transition border border-border bg-white text-foreground hover:bg-muted">Iniciar sesión</Link>
               </div>
             </>
           )}
@@ -73,9 +68,7 @@ export default function VerifyEmailPage() {
               <AlertCircle className="mx-auto mb-4 h-12 w-12 text-destructive" />
               <h1 className="text-2xl font-bold">Enlace inválido</h1>
               <p className="mt-3 text-sm text-muted-foreground">El enlace de verificación no contiene un token.</p>
-              <Button asChild className="mt-6" variant="outline">
-                <Link to={routes.login}>Ir al inicio de sesión</Link>
-              </Button>
+              <Link to={routes.login} className="focus-ring inline-flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-semibold transition border border-border bg-white text-foreground hover:bg-muted mt-6">Ir al inicio de sesión</Link>
             </>
           )}
         </CardContent>

@@ -136,6 +136,7 @@ export const catalogItems: CatalogItem[] = [
 ]
 
 export const dashboardMetrics: DashboardMetrics = {
+  currency: "GTQ",
   totalQuoted: 88920,
   totalAccepted: 42180,
   conversionRate: 61,
@@ -169,6 +170,7 @@ export const companySettings: CompanySettings = {
   defaultCurrency: "GTQ",
   taxLabel: "IVA",
   taxRate: 12,
+  pricesIncludeTax: false,
   quotePrefix: "COT",
   quoteDigits: 4,
   footerText: "Esta cotizacion es valida por el tiempo indicado.",

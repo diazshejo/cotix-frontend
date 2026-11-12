@@ -185,6 +185,7 @@ export default function CompanySettingsPage() {
               </SelectField>
               <InputField label="Impuesto" error={errors.taxLabel?.message} {...register("taxLabel")} />
               <InputField label="Tasa %" type="number" step="0.01" error={errors.taxRate?.message} {...register("taxRate")} />
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" {...register("pricesIncludeTax")} />Precios incluyen impuesto</label>
               <InputField label="Prefijo" error={errors.quotePrefix?.message} {...register("quotePrefix")} />
               <InputField label="Digitos" type="number" error={errors.quoteDigits?.message} {...register("quoteDigits")} />
             </div>

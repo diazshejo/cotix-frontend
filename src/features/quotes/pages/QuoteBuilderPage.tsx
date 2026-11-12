@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { AlertCircle, Check, Copy, Download, Plus, Save, Search, Send, Trash2 } from "lucide-react"
-import { useMemo, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 import { getApiErrorMessage, isPlanRestriction } from "@/api/client"
 import { listCatalogItems } from "@/api/catalog"
 import { listClients } from "@/api/clients"
-import { downloadQuotePdf, saveQuote, sendQuote } from "@/api/quotes"
+import { downloadQuotePdf, getQuote, publishQuote, saveQuote, sendQuote } from "@/api/quotes"
 import { getCompanySettings } from "@/api/settings"
 import { ErrorState, LoadingState } from "@/components/common/StateBlock"
 import { Button } from "@/components/ui/Button"
@@ -36,6 +36,7 @@ function normalizePercentInput(value: string) {
 
 export default function QuoteBuilderPage() {
   const navigate = useNavigate()
+  const { id = "" } = useParams()
   const [clientName, setClientName] = useState("")
   const [clientEmail, setClientEmail] = useState("")
   const [clientId, setClientId] = useState("")
@@ -46,14 +47,16 @@ export default function QuoteBuilderPage() {
   const [termsConditions, setTermsConditions] = useState("")
   const [items, setItems] = useState<QuoteItem[]>([])
   const [savedQuote, setSavedQuote] = useState<Quote | null>(null)
+  const hydratedQuoteId = useRef("")
   const [catalogOpen, setCatalogOpen] = useState(false)
   const [catalogSearch, setCatalogSearch] = useState("")
   const [validationError, setValidationError] = useState("")
   const [planLimitHit, setPlanLimitHit] = useState(false)
+  const [planLimitMessage, setPlanLimitMessage] = useState("")
   const role = useAuthStore((state) => state.user?.role)
   const queryClient = useQueryClient()
-  const canEdit = canPerform(role, "edit")
-  const canSend = canPerform(role, "sendQuote")
+  const canEdit = canPerform(role, "edit") && (!savedQuote || savedQuote.status === "draft")
+  const canSend = canPerform(role, "sendQuote") && (!savedQuote || savedQuote.status === "draft")
   const canDownload = canPerform(role, "downloadPdf")
   const canCopyLink = canPerform(role, "copyPublicLink")
   const confirm = useConfirm()
@@ -64,6 +67,26 @@ export default function QuoteBuilderPage() {
     queryFn: getCompanySettings,
     staleTime: 5 * 60 * 1000,
   })
+  const existingQuoteQuery = useQuery({
+    queryKey: queryKeys.quote(id),
+    queryFn: () => getQuote(id),
+    enabled: Boolean(id),
+  })
+  useEffect(() => {
+    const quote = existingQuoteQuery.data
+    if (!quote || hydratedQuoteId.current === quote.id) return
+    hydratedQuoteId.current = quote.id
+    setSavedQuote(quote)
+    setClientId(quote.clientId ?? "")
+    setClientName(quote.clientName)
+    setClientEmail(quote.clientEmail)
+    setTitle(quote.title ?? quote.number)
+    setIssueDate(quote.issueDate)
+    setValidUntil(quote.validUntil)
+    setNotes(quote.notes ?? "")
+    setTermsConditions(quote.termsConditions ?? "")
+    setItems(quote.items)
+  }, [existingQuoteQuery.data])
   const clientsQuery = useQuery({
     queryKey: queryKeys.clients(""),
     queryFn: () => listClients(""),
@@ -73,7 +96,10 @@ export default function QuoteBuilderPage() {
     queryFn: () => listCatalogItems(debouncedCatalogSearch),
   })
 
-  const totals = useMemo(() => calculateQuoteTotals(items), [items])
+  const taxRate = savedQuote?.taxRate ?? settingsQuery.data?.taxRate ?? 12
+  const pricesIncludeTax = savedQuote?.pricesIncludeTax ?? settingsQuery.data?.pricesIncludeTax ?? false
+  const currency = savedQuote?.currency ?? settingsQuery.data?.defaultCurrency ?? "GTQ"
+  const totals = useMemo(() => calculateQuoteTotals(items, taxRate / 100, pricesIncludeTax), [items, taxRate, pricesIncludeTax])
   const payload: Quote = {
     id: savedQuote?.id ?? "",
     clientId,
@@ -86,7 +112,7 @@ export default function QuoteBuilderPage() {
     validUntil,
     items,
     total: totals.total,
-    currency: "GTQ",
+    currency,
     publicToken: savedQuote?.publicToken,
     notes,
     termsConditions,
@@ -96,11 +122,15 @@ export default function QuoteBuilderPage() {
     mutationFn: saveQuote,
     onSuccess: (quote) => {
       setSavedQuote(quote)
+      setItems(quote.items)
       toast.success("Borrador guardado.")
+      queryClient.setQueryData(queryKeys.quote(quote.id), quote)
+      void queryClient.invalidateQueries({ queryKey: ["quotes"] })
       void queryClient.invalidateQueries({ queryKey: queryKeys.planUsage })
     },
     onError: (error) => {
       if (isPlanRestriction(error)) {
+        setPlanLimitMessage(getApiErrorMessage(error))
         setPlanLimitHit(true)
       } else {
         toast.error(getApiErrorMessage(error))
@@ -108,10 +138,27 @@ export default function QuoteBuilderPage() {
     },
   })
   const sendMutation = useMutation({
-    mutationFn: sendQuote,
+    mutationFn: async (draft: Quote) => {
+      const saved = await saveQuote(draft)
+      setSavedQuote(saved)
+      setItems(saved.items)
+      await sendQuote(saved.id)
+      return saved
+    },
     onSuccess: () => {
       setSavedQuote((current) => (current ? { ...current, status: "sent" } : current))
+      void queryClient.invalidateQueries({ queryKey: ["quotes"] })
+      if (savedQuote) void queryClient.invalidateQueries({ queryKey: queryKeys.quote(savedQuote.id) })
       toast.success("Cotizacion enviada.")
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error)),
+  })
+  const publishMutation = useMutation({
+    mutationFn: async (draft: Quote) => publishQuote((await saveQuote(draft)).id),
+    onSuccess: (published) => {
+      setSavedQuote(published)
+      void queryClient.invalidateQueries({ queryKey: ["quotes"] })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.quote(published.id) })
     },
     onError: (error) => toast.error(getApiErrorMessage(error)),
   })
@@ -149,7 +196,9 @@ export default function QuoteBuilderPage() {
         quantity: 1,
         unitPrice: item.unitPrice,
         discountRate: 0,
-        taxRate: item.taxRate,
+        taxRate: item.taxRate > 0 ? taxRate / 100 : 0,
+        taxable: item.taxRate > 0,
+        discountType: "none",
       },
     ])
     setCatalogOpen(false)
@@ -174,19 +223,43 @@ export default function QuoteBuilderPage() {
       description: "Se enviara esta cotizacion al cliente usando los canales configurados en el backend.",
       confirmLabel: "Enviar cotizacion",
     })
-    if (confirmed && savedQuote) sendMutation.mutate(savedQuote.id)
+    if (confirmed && savedQuote) sendMutation.mutate(payload)
   }
 
   async function copyPublicLink() {
     if (!savedQuote?.publicToken) {
-      toast.error("Guarda la cotizacion antes de copiar el link publico.")
+      toast.error("Guarda la cotización antes de compartirla.")
       return
     }
-    const url = `${import.meta.env.VITE_APP_URL ?? window.location.origin}/q/${savedQuote.publicToken}`
-    await navigator.clipboard.writeText(url)
-    toast.success("Link publico copiado.")
+    let shared = savedQuote
+    if (shared.status === "draft") {
+      if (!canSend || !validateQuote()) return
+      const approved = await confirm({
+        title: "Publicar y copiar enlace",
+        description: "La cotización pasará a enviada y el cliente podrá aceptarla desde el enlace. No se enviará un correo.",
+        confirmLabel: "Publicar y copiar",
+      })
+      if (!approved) return
+      try {
+        shared = await publishMutation.mutateAsync(payload)
+      } catch {
+        return
+      }
+    }
+    if (!shared.publicToken) return
+    try {
+      await navigator.clipboard.writeText(`${import.meta.env.VITE_APP_URL ?? window.location.origin}/q/${shared.publicToken}`)
+      toast.success("Enlace público copiado.")
+    } catch {
+      toast.error("No se pudo copiar el enlace.")
+    }
   }
 
+  if (id && existingQuoteQuery.isLoading) return <LoadingState title="Cargando cotizacion" />
+  if (id && existingQuoteQuery.isError) {
+    return <ErrorState title="No se pudo cargar la cotizacion" description="Revisa el borrador e intenta de nuevo." onAction={() => void existingQuoteQuery.refetch()} />
+  }
+  if (id && savedQuote?.id !== id) return <LoadingState title="Preparando borrador" />
   if (clientsQuery.isError) {
     return <ErrorState title="No se pudo preparar el constructor" description="No logramos cargar clientes desde la API." onAction={() => void clientsQuery.refetch()} />
   }
@@ -199,14 +272,14 @@ export default function QuoteBuilderPage() {
             <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
               <div>
                 <p className="label">Constructor</p>
-                <h2 className="mt-1 text-xl font-bold">Nueva cotizacion</h2>
+                <h2 className="mt-1 text-xl font-bold">{id ? `Editar ${savedQuote?.number ?? "cotizacion"}` : "Nueva cotizacion"}</h2>
                 {validationError ? <FieldError message={validationError} /> : null}
               </div>
               <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-                <Button variant="secondary" disabled={!canEdit} loading={saveMutation.isPending} onClick={handleSave}><Save className="h-4 w-4" />Guardar</Button>
-                <Button variant="secondary" disabled={!canCopyLink || !savedQuote?.publicToken} onClick={copyPublicLink}><Copy className="h-4 w-4" />Link</Button>
+                <Button variant="secondary" disabled={!canEdit || sendMutation.isPending || settingsQuery.isLoading} loading={saveMutation.isPending} onClick={handleSave}><Save className="h-4 w-4" />Guardar</Button>
+                <Button variant="secondary" disabled={!canCopyLink || !savedQuote?.publicToken || (savedQuote.status === "draft" && !canSend)} loading={publishMutation.isPending} onClick={copyPublicLink}><Copy className="h-4 w-4" />Link</Button>
                 <Button variant="secondary" disabled={!canDownload || !savedQuote} loading={pdfMutation.isPending} onClick={() => savedQuote && pdfMutation.mutate(savedQuote.id)}><Download className="h-4 w-4" />PDF</Button>
-                <Button disabled={!canSend || !savedQuote} loading={sendMutation.isPending} onClick={handleSend}><Send className="h-4 w-4" />Enviar</Button>
+                <Button disabled={!canSend || !savedQuote || saveMutation.isPending} loading={sendMutation.isPending} onClick={handleSend}><Send className="h-4 w-4" />Enviar</Button>
               </div>
             </div>
           </CardHeader>
@@ -266,9 +339,8 @@ export default function QuoteBuilderPage() {
               </div>
             ) : null}
             {items.map((item) => {
-              const lineTotals = calculateQuoteLineTotals(item)
+              const lineTotals = calculateQuoteLineTotals(item, taxRate / 100, pricesIncludeTax)
               const discountPercent = Math.round(item.discountRate * 10000) / 100
-              const taxPercent = Math.round(item.taxRate * 10000) / 100
 
               return (
                 <div key={item.id} className="rounded-lg border border-border bg-white p-4">
@@ -279,30 +351,51 @@ export default function QuoteBuilderPage() {
                     </label>
                     <label>
                       <span className="label">Cant.</span>
-                      <input className="field mt-2" disabled={!canEdit} type="number" min="1" step="1" value={item.quantity} onChange={(event) => updateItem(item.id, { quantity: Math.max(1, Number(event.target.value) || 1) })} />
+                      <input className="field mt-2" disabled={!canEdit} type="number" min="0.0001" step="0.0001" value={item.quantity} onChange={(event) => updateItem(item.id, { quantity: Math.max(0.0001, Number(event.target.value) || 0.0001) })} />
                     </label>
                     <label>
                       <span className="label">Precio</span>
                       <input className="field mt-2" disabled={!canEdit} type="number" min="0" step="0.01" value={item.unitPrice} onChange={(event) => updateItem(item.id, { unitPrice: Number(event.target.value) })} />
                     </label>
-                    <label>
-                      <span className="label">Desc. %</span>
+                    <div>
+                      <span className="label">Descuento</span>
+                      <select
+                        className="field mt-2"
+                        aria-label={`Tipo de descuento de ${item.name}`}
+                        disabled={!canEdit}
+                        value={item.discountType === "fixed" ? "fixed" : "percent"}
+                        onChange={(event) => updateItem(item.id, {
+                          discountType: event.target.value === "fixed" ? "fixed" : "none",
+                          discountRate: 0,
+                          discountValue: 0,
+                        })}
+                      >
+                        <option value="percent">%</option>
+                        <option value="fixed">Monto</option>
+                      </select>
                       <input
                         className="field mt-2"
+                        aria-label={`Valor del descuento de ${item.name}`}
                         disabled={!canEdit}
                         type="number"
                         min="0"
-                        max="100"
+                        max={item.discountType === "fixed" ? item.quantity * item.unitPrice : 100}
                         step="0.01"
-                        placeholder="0-100"
-                        value={discountPercent}
-                        onChange={(event) => updateItem(item.id, { discountRate: normalizePercentInput(event.target.value) / 100 })}
+                        value={item.discountType === "fixed" ? item.discountValue ?? 0 : discountPercent}
+                        onChange={(event) => {
+                          if (item.discountType === "fixed") {
+                            const discountValue = Math.min(item.quantity * item.unitPrice, Math.max(0, Number(event.target.value) || 0))
+                            updateItem(item.id, { discountValue })
+                            return
+                          }
+                          const discountRate = normalizePercentInput(event.target.value) / 100
+                          updateItem(item.id, { discountRate, discountType: discountRate > 0 ? "percent" : "none", discountValue: discountRate * 100 })
+                        }}
                       />
-                      <p className="mt-1 text-xs text-muted-foreground">Max. 100%</p>
-                    </label>
-                    <label>
-                      <span className="label">IVA %</span>
-                      <input className="field mt-2" disabled={!canEdit} type="number" min="0" max="100" step="0.01" placeholder="0-100" value={taxPercent} onChange={(event) => updateItem(item.id, { taxRate: normalizePercentInput(event.target.value) / 100 })} />
+                    </div>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" disabled={!canEdit} checked={item.taxable ?? item.taxRate > 0} onChange={(event) => updateItem(item.id, { taxable: event.target.checked, taxRate: event.target.checked ? taxRate / 100 : 0 })} />
+                      {settingsQuery.data?.taxLabel ?? "Impuesto"} {taxRate}%
                     </label>
                     <Button variant="ghost" disabled={!canEdit} className="h-11 w-11 px-0" aria-label="Eliminar item" onClick={() => removeItem(item.id)}>
                       <Trash2 className="h-4 w-4" />
@@ -310,7 +403,7 @@ export default function QuoteBuilderPage() {
                   </div>
                   <div className="mt-3 flex flex-col justify-between gap-2 border-t border-border pt-3 text-sm text-muted-foreground sm:flex-row">
                     <span>{item.description}</span>
-                    <strong className="text-foreground">{formatCurrency(lineTotals.total)}</strong>
+                    <strong className="text-foreground">{formatCurrency(lineTotals.total, currency)}</strong>
                   </div>
                 </div>
               )
@@ -366,16 +459,16 @@ export default function QuoteBuilderPage() {
                 {items.map((item) => (
                   <div key={item.id} className="flex justify-between gap-4 border-b border-border pb-3 text-sm">
                     <span>{item.name}</span>
-                    <strong>{formatCurrency(calculateQuoteLineTotals(item).taxableSubtotal)}</strong>
+                    <strong>{formatCurrency(calculateQuoteLineTotals(item, taxRate / 100, pricesIncludeTax).taxableSubtotal, currency)}</strong>
                   </div>
                 ))}
               </div>
               <div className="mt-5 space-y-2 text-sm">
-                <div className="flex justify-between"><span>Subtotal</span><strong>{formatCurrency(totals.subtotal)}</strong></div>
-                <div className="flex justify-between"><span>Descuentos</span><strong>-{formatCurrency(totals.discount)}</strong></div>
-                <div className="flex justify-between"><span>Base imponible</span><strong>{formatCurrency(totals.taxableSubtotal)}</strong></div>
-                <div className="flex justify-between"><span>Impuestos</span><strong>{formatCurrency(totals.tax)}</strong></div>
-                <div className="flex justify-between border-t border-border pt-3 text-lg"><span>Total</span><strong>{formatCurrency(totals.total)}</strong></div>
+                <div className="flex justify-between"><span>Subtotal</span><strong>{formatCurrency(totals.subtotal, currency)}</strong></div>
+                <div className="flex justify-between"><span>Descuentos</span><strong>-{formatCurrency(totals.discount, currency)}</strong></div>
+                <div className="flex justify-between"><span>Base imponible</span><strong>{formatCurrency(totals.taxableSubtotal, currency)}</strong></div>
+                <div className="flex justify-between"><span>Impuestos</span><strong>{formatCurrency(totals.tax, currency)}</strong></div>
+                <div className="flex justify-between border-t border-border pt-3 text-lg"><span>Total</span><strong>{formatCurrency(totals.total, currency)}</strong></div>
               </div>
               <p className="mt-5 rounded-md bg-slate-50 p-3 text-xs leading-5 text-muted-foreground">{notes}</p>
             </div>
@@ -385,16 +478,16 @@ export default function QuoteBuilderPage() {
 
       <Modal
         open={planLimitHit}
-        title="Limite de cotizaciones alcanzado"
-        description="Has llegado al maximo de cotizaciones permitidas por tu plan este mes."
+        title="Acción no disponible en tu plan"
+        description={planLimitMessage}
         onClose={() => setPlanLimitHit(false)}
       >
         <div className="space-y-5">
           <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
             <div className="text-sm text-amber-800">
-              <p className="font-semibold">Plan Basico — 50 cotizaciones / mes</p>
-              <p className="mt-1 leading-5">Ya usaste las 50 cotizaciones disponibles este mes. Podras crear nuevas cotizaciones el proximo mes o actualizando tu plan.</p>
+              <p className="font-semibold">Revisa tu plan</p>
+              <p className="mt-1 leading-5">{planLimitMessage}</p>
             </div>
           </div>
           <div className="rounded-lg border border-border p-4">
@@ -432,7 +525,7 @@ export default function QuoteBuilderPage() {
                     <p className="font-semibold">{item.name}</p>
                     <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
                   </div>
-                  <strong>{formatCurrency(item.unitPrice)}</strong>
+                  <strong>{formatCurrency(item.unitPrice, currency)}</strong>
                 </div>
               </button>
             ))}
@@ -445,16 +538,16 @@ export default function QuoteBuilderPage() {
           <div className="mb-3 grid grid-cols-2 gap-3 text-sm">
             <div>
               <span className="label">Subtotal</span>
-              <p className="font-semibold">{formatCurrency(totals.subtotal)}</p>
+              <p className="font-semibold">{formatCurrency(totals.subtotal, currency)}</p>
             </div>
             <div className="text-right">
               <span className="label">Total</span>
-              <p className="text-lg font-bold">{formatCurrency(totals.total)}</p>
+              <p className="text-lg font-bold">{formatCurrency(totals.total, currency)}</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <Button variant="secondary" disabled={!canEdit} onClick={() => setCatalogOpen(true)}><Plus className="h-4 w-4" />Agregar item</Button>
-            <Button disabled={!canEdit} loading={saveMutation.isPending} onClick={handleSave}><Save className="h-4 w-4" />Guardar</Button>
+            <Button disabled={!canEdit || sendMutation.isPending || settingsQuery.isLoading} loading={saveMutation.isPending} onClick={handleSave}><Save className="h-4 w-4" />Guardar</Button>
           </div>
         </div>
       </div>

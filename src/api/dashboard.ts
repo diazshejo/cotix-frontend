@@ -4,6 +4,7 @@ import type { DashboardMetrics } from "@/types/dashboard"
 import type { QuoteDto } from "@/api/quotes"
 
 interface DashboardMetricsDto {
+  currency: "GTQ" | "USD"
   total_quoted: number
   total_accepted: number
   conversion_rate: number
@@ -45,6 +46,7 @@ function mapQuoteSummary(dto: QuoteDto) {
 
 function mapDashboard(dto: DashboardMetricsDto): DashboardMetrics {
   return {
+    currency: dto.currency,
     totalQuoted: dto.total_quoted,
     totalAccepted: dto.total_accepted,
     conversionRate: dto.conversion_rate,
@@ -64,7 +66,7 @@ function mapDashboard(dto: DashboardMetricsDto): DashboardMetrics {
   }
 }
 
-export async function getDashboardMetrics(period = "month") {
-  const response = apiClient.get<DashboardMetricsDto>("/reports/dashboard/", { params: { period } }).then((res) => mapDashboard(res.data))
+export async function getDashboardMetrics(period = "month", currency: "GTQ" | "USD" = "GTQ") {
+  const response = apiClient.get<DashboardMetricsDto>("/reports/dashboard/", { params: { period, currency } }).then((res) => mapDashboard(res.data))
   return withMockFallback(response, dashboardMetrics)
 }

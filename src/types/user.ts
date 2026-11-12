@@ -12,6 +12,8 @@ export interface AuthUser {
   tenantId: string
   tenantPlan: TenantPlan
   tenantStatus: TenantStatus
+  trialEndsAt?: string
+  trialExpired?: boolean
 }
 
 export interface TeamMember {

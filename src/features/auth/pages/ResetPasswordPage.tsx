@@ -41,9 +41,7 @@ export default function ResetPasswordPage() {
             <AlertCircle className="mx-auto mb-4 h-12 w-12 text-destructive" />
             <h1 className="text-2xl font-bold">Enlace inválido</h1>
             <p className="mt-3 text-sm text-muted-foreground">El enlace de recuperación no contiene un token válido.</p>
-            <Button asChild className="mt-6" variant="outline">
-              <Link to={routes.forgotPassword}>Solicitar nuevo enlace</Link>
-            </Button>
+            <Link to={routes.forgotPassword} className="focus-ring inline-flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-semibold transition border border-border bg-white text-foreground hover:bg-muted mt-6">Solicitar nuevo enlace</Link>
           </CardContent>
         </Card>
       </main>
@@ -60,9 +58,7 @@ export default function ResetPasswordPage() {
             <p className="mt-3 text-sm leading-6 text-muted-foreground">
               Tu password fue restablecido exitosamente. Ahora puedes ingresar con tu nueva contraseña.
             </p>
-            <Button asChild className="mt-6">
-              <Link to={routes.login}>Ir al inicio de sesión</Link>
-            </Button>
+            <Link to={routes.login} className="focus-ring inline-flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-semibold transition bg-primary text-primary-foreground hover:bg-primary/92 shadow-sm mt-6">Ir al inicio de sesión</Link>
           </CardContent>
         </Card>
       </main>

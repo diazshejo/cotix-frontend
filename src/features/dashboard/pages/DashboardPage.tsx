@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
+import { useState } from "react"
 import { ArrowUpRight, Clock, FileText, TrendingUp } from "lucide-react"
 import { Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { getDashboardMetrics } from "@/api/dashboard"
@@ -10,10 +11,11 @@ import { queryKeys } from "@/constants/queryKeys"
 import { formatCurrency } from "@/utils/currency"
 
 export default function DashboardPage() {
-  const period = "month"
+  const [period, setPeriod] = useState<"week" | "month" | "quarter" | "year">("month")
+  const [currency, setCurrency] = useState<"GTQ" | "USD">("GTQ")
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: queryKeys.dashboard(period),
-    queryFn: () => getDashboardMetrics(period),
+    queryKey: queryKeys.dashboard(`${period}-${currency}`),
+    queryFn: () => getDashboardMetrics(period, currency),
   })
 
   if (isLoading) return <PageSkeleton variant="dashboard" />
@@ -28,14 +30,22 @@ export default function DashboardPage() {
   }
 
   const metrics = [
-    { label: "Monto cotizado", value: formatCurrency(data.totalQuoted), helper: `${data.quotesCreated} cotizaciones creadas`, icon: FileText },
-    { label: "Monto aceptado", value: formatCurrency(data.totalAccepted), helper: `${data.quotesAccepted} aceptadas`, icon: TrendingUp },
+    { label: "Monto cotizado", value: formatCurrency(data.totalQuoted, currency), helper: `${data.quotesCreated} cotizaciones creadas`, icon: FileText },
+    { label: "Monto aceptado", value: formatCurrency(data.totalAccepted, currency), helper: `${data.quotesAccepted} aceptadas`, icon: TrendingUp },
     { label: "Conversion", value: `${data.conversionRate}%`, helper: `${data.quotesSent} enviadas`, icon: ArrowUpRight },
     { label: "Vencen pronto", value: String(data.expiringQuotes.length), helper: "requieren seguimiento", icon: Clock },
   ]
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-end">
+        <select className="field w-full sm:w-48" value={period} onChange={(event) => setPeriod(event.target.value as typeof period)} aria-label="Periodo del dashboard">
+          <option value="week">Esta semana</option>
+          <option value="month">Este mes</option>
+          <option value="quarter">Este trimestre</option>
+          <option value="year">Este año</option>
+        </select>
+      </div>
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {metrics.map((metric) => (
           <Card key={metric.label}>
@@ -63,9 +73,9 @@ export default function DashboardPage() {
                 <p className="label">Rendimiento</p>
                 <h2 className="mt-1 text-lg font-bold">Conversión de cotizaciones</h2>
               </div>
-              <select className="field w-full sm:w-40">
-                <option>Este mes</option>
-                <option>Este año</option>
+              <select className="field w-full sm:w-40" value={currency} onChange={(event) => setCurrency(event.target.value as "GTQ" | "USD")} aria-label="Moneda del reporte">
+                <option value="GTQ">GTQ</option>
+                <option value="USD">USD</option>
               </select>
             </div>
           </CardHeader>

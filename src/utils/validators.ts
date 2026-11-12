@@ -16,7 +16,7 @@ const passwordField = (label = "El password") =>
 
 export const loginSchema = z.object({
   email: z.string().trim().email("Ingresa un email valido."),
-  password: z.string().min(8, "El password debe tener al menos 8 caracteres."),
+  password: z.string().min(1, "Ingresa tu password."),
 })
 
 export const registerSchema = z
@@ -75,7 +75,7 @@ export const quoteItemSchema = z.object({
   id: z.string(),
   name: requiredText("El item"),
   description: z.string(),
-  quantity: z.coerce.number().min(1, "La cantidad debe ser al menos 1."),
+  quantity: z.coerce.number().gt(0, "La cantidad debe ser mayor a cero."),
   unitPrice: money,
   discountRate: z.coerce.number().min(0).max(1),
   taxRate: z.coerce.number().min(0).max(1),
@@ -112,6 +112,7 @@ export const companySettingsSchema = z.object({
   defaultCurrency: z.enum(["GTQ", "USD"]),
   taxLabel: requiredText("La etiqueta de impuesto", 2),
   taxRate: percent,
+  pricesIncludeTax: z.boolean(),
   quotePrefix: requiredText("El prefijo", 2),
   quoteDigits: z.coerce.number().min(3).max(8),
   footerText: requiredText("El pie de pagina", 8),

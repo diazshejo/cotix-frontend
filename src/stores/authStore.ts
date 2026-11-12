@@ -1,3 +1,4 @@
+import { queryClient } from "@/queryClient"
 import { create } from "zustand"
 import type { AuthUser } from "@/types/user"
 
@@ -15,6 +16,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   status: "idle",
   setChecking: () => set({ status: "checking" }),
-  setSession: (accessToken, user) => set({ accessToken, user, status: "authenticated" }),
-  clearSession: () => set({ accessToken: null, user: null, status: "guest" }),
+  setSession: (accessToken, user) => {
+    queryClient.clear()
+    set({ accessToken, user, status: "authenticated" })
+  },
+  clearSession: () => {
+    queryClient.clear()
+    set({ accessToken: null, user: null, status: "guest" })
+  },
 }))

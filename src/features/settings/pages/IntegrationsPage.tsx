@@ -203,6 +203,7 @@ function validateState(state: WizardState) {
 }
 
 function PlanUpsell({ compact = false }: { compact?: boolean }) {
+  const navigate = useNavigate()
   return (
     <Card>
       <CardContent className={cn("flex flex-col gap-4", compact ? "p-4" : "p-6 md:flex-row md:items-center md:justify-between")}>

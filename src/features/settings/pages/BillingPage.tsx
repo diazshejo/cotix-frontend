@@ -113,6 +113,7 @@ export default function BillingPage() {
   const setSession = useAuthStore((s) => s.setSession)
   const currentPlan = user?.tenantPlan ?? "free"
   const isPaid = currentPlan !== "free"
+  const trialExpired = Boolean(user?.trialExpired || (user?.trialEndsAt && Date.now() >= new Date(user.trialEndsAt).getTime()))
 
   const success = searchParams.get("success") === "true"
   const cancelled = searchParams.get("cancelled") === "true"
@@ -183,6 +184,16 @@ export default function BillingPage() {
       </div>
 
       {/* Feedback banners */}
+      {currentPlan === "free" && (
+        <div className="rounded-lg border border-border bg-white p-4 text-sm">
+          <p className="font-semibold">{trialExpired ? "Tu prueba gratuita terminó" : "Prueba gratuita de Cotix Básico"}</p>
+          <p className="mt-1 text-muted-foreground">
+            {trialExpired
+              ? "Tus datos siguen disponibles. Elige un plan para continuar trabajando."
+              : `Tienes 50 cotizaciones por mes y 1 usuario hasta ${user?.trialEndsAt ? new Date(user.trialEndsAt).toLocaleDateString("es-GT") : "el fin de la prueba"}.`}
+          </p>
+        </div>
+      )}
       {success && (
         <div className="flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
           <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />

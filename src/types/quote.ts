@@ -8,6 +8,12 @@ export interface QuoteItem {
   unitPrice: number
   discountRate: number
   taxRate: number
+  taxable?: boolean
+  unit?: string
+  discountType?: "none" | "percent" | "fixed"
+  discountValue?: number
+  discountAmount?: number
+  lineTotal?: number
 }
 
 export interface Quote {
@@ -21,6 +27,9 @@ export interface Quote {
   issueDate: string
   validUntil: string
   total: number
+  totals?: QuoteTotals
+  taxRate?: number
+  pricesIncludeTax?: boolean
   currency: "GTQ" | "USD"
   publicToken?: string
   notes?: string

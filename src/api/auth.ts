@@ -15,6 +15,8 @@ export interface BackendUserDto {
     id: string | number
     plan?: string
     status?: string
+    trial_ends_at?: string
+    trial_expired?: boolean
   }
 }
 
@@ -53,6 +55,8 @@ function mapUser(dto: BackendUserDto): AuthUser {
     tenantId: String(dto.tenant_id ?? dto.tenant?.id ?? ""),
     tenantPlan: (dto.tenant?.plan ?? "free") as TenantPlan,
     tenantStatus: (dto.tenant?.status ?? "demo") as TenantStatus,
+    trialEndsAt: dto.tenant?.trial_ends_at,
+    trialExpired: dto.tenant?.trial_expired ?? false,
   }
 }
 

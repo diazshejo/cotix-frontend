@@ -3,6 +3,17 @@ import { calculateQuoteTotals } from "@/utils/quoteCalculator"
 import type { QuoteItem } from "@/types/quote"
 
 describe("calculateQuoteTotals", () => {
+  it("keeps fractional quantities and fixed discounts with included tax", () => {
+    const item: QuoteItem = {
+      id: "half-hour", name: "Half hour", description: "", quantity: 0.5,
+      unitPrice: 100, discountRate: 0, discountType: "fixed", discountValue: 5,
+      taxable: true, taxRate: 0.12,
+    }
+    expect(calculateQuoteTotals([item], 0.12, true)).toEqual({
+      subtotal: 50, discount: 5, taxableSubtotal: 40.18, tax: 4.82, total: 45,
+    })
+  })
+
   it("calculates a 10 percent discount", () => {
     const items: QuoteItem[] = [
       {

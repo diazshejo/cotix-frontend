@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
+import { useState } from "react"
 import { Download, PieChart } from "lucide-react"
 import { Cell, Pie, PieChart as RePieChart, ResponsiveContainer, Tooltip } from "recharts"
 import { getDashboardMetrics } from "@/api/dashboard"
@@ -9,10 +10,11 @@ import { queryKeys } from "@/constants/queryKeys"
 import { formatCurrency } from "@/utils/currency"
 
 export default function ReportsPage() {
-  const period = "month"
+  const [period, setPeriod] = useState<"week" | "month" | "quarter" | "year">("month")
+  const [currency, setCurrency] = useState<"GTQ" | "USD">("GTQ")
   const { data: metrics, isLoading, isError, refetch } = useQuery({
-    queryKey: queryKeys.dashboard(period),
-    queryFn: () => getDashboardMetrics(period),
+    queryKey: queryKeys.dashboard(`${period}-${currency}`),
+    queryFn: () => getDashboardMetrics(period, currency),
   })
 
   if (isLoading) return <LoadingState title="Cargando reportes" />
@@ -31,6 +33,8 @@ export default function ReportsPage() {
   function exportCsv() {
     const rows = [
       ["Metrica", "Valor"],
+      ["Moneda", currency],
+      ["Periodo", period],
       ["Total cotizado", reportMetrics.totalQuoted],
       ["Total aceptado", reportMetrics.totalAccepted],
       ["Conversion", reportMetrics.conversionRate],
@@ -56,14 +60,26 @@ export default function ReportsPage() {
           <h2 className="mt-2 text-2xl font-bold">Reportes</h2>
           <p className="mt-2 text-sm text-muted-foreground">Vision comercial para entender conversion, volumen y valor cotizado.</p>
         </div>
-        <Button variant="secondary" onClick={exportCsv}><Download className="h-4 w-4" />Exportar CSV</Button>
+        <div className="flex gap-2">
+          <select className="field" value={period} onChange={(event) => setPeriod(event.target.value as typeof period)} aria-label="Periodo del reporte">
+            <option value="week">Esta semana</option>
+            <option value="month">Este mes</option>
+            <option value="quarter">Este trimestre</option>
+            <option value="year">Este año</option>
+          </select>
+          <select className="field" value={currency} onChange={(event) => setCurrency(event.target.value as "GTQ" | "USD")} aria-label="Moneda del reporte">
+            <option value="GTQ">GTQ</option>
+            <option value="USD">USD</option>
+          </select>
+          <Button variant="secondary" onClick={exportCsv}><Download className="h-4 w-4" />Exportar CSV</Button>
+        </div>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
         <Card>
           <CardHeader>
             <p className="label">Estados</p>
-            <h3 className="mt-1 text-lg font-bold">Distribucion mensual</h3>
+            <h3 className="mt-1 text-lg font-bold">Distribución del periodo</h3>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
@@ -91,7 +107,7 @@ export default function ReportsPage() {
                 </div>
                 <div className="flex-1">
                   <p className="font-semibold">{item.itemName}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{formatCurrency(item.totalAmount)} cotizados</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{formatCurrency(item.totalAmount, currency)} cotizados</p>
                   <div className="mt-2 h-2 rounded-full bg-muted">
                     <div className="h-2 rounded-full bg-primary" style={{ width: `${82 - index * 18}%` }} />
                   </div>

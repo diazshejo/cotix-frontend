@@ -28,7 +28,7 @@ import {
 
 // Must stay in sync with backend apps/tenants/services/plans.py QUOTA_MAX_USERS
 const USER_LIMITS: Record<TenantPlan, number | null> = {
-  free: null,
+  free: 1,
   basic: 1,
   premium: 3,
   business: null,

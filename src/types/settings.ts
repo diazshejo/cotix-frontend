@@ -14,6 +14,7 @@ export interface CompanySettings {
   defaultCurrency: "GTQ" | "USD"
   taxLabel: string
   taxRate: number
+  pricesIncludeTax: boolean
   quotePrefix: string
   quoteDigits: number
   footerText: string

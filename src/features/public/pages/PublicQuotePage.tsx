@@ -4,7 +4,7 @@ import { useEffect } from "react"
 import { useParams } from "react-router-dom"
 import { toast } from "sonner"
 import { getApiErrorMessage } from "@/api/client"
-import { acceptPublicQuote, downloadQuotePdf, getPublicQuote, rejectPublicQuote } from "@/api/quotes"
+import { acceptPublicQuote, downloadPublicQuotePdf, getPublicQuote, rejectPublicQuote } from "@/api/quotes"
 import { applyBrandColor } from "@/utils/color"
 import { useConfirm } from "@/components/common/ConfirmDialog"
 import { ErrorState, LoadingState } from "@/components/common/StateBlock"
@@ -37,7 +37,7 @@ export default function PublicQuotePage() {
   })
 
   const pdfMutation = useMutation({
-    mutationFn: () => downloadQuotePdf(quote!.id),
+    mutationFn: () => downloadPublicQuotePdf(token),
     onSuccess: (blob) => {
       const url = URL.createObjectURL(blob)
       const link = document.createElement("a")
@@ -61,7 +61,7 @@ export default function PublicQuotePage() {
     )
   }
 
-  const totals = calculateQuoteTotals(quote.items)
+  const totals = quote.totals ?? calculateQuoteTotals(quote.items, quote.taxRate === undefined ? undefined : quote.taxRate / 100, quote.pricesIncludeTax)
   const canRespond = quote.status === "sent" || quote.status === "viewed"
   async function rejectQuote() {
     const confirmed = await confirm({
@@ -109,8 +109,8 @@ export default function PublicQuotePage() {
             </div>
             <div className="rounded-lg bg-accent p-5 text-accent-foreground">
               <p className="text-sm font-semibold">Total</p>
-              <p className="mt-2 text-3xl font-bold">{formatCurrency(totals.total)}</p>
-              <p className="mt-2 text-xs">Incluye IVA</p>
+              <p className="mt-2 text-3xl font-bold">{formatCurrency(totals.total, quote.currency)}</p>
+              <p className="mt-2 text-xs">{totals.tax > 0 ? (quote.pricesIncludeTax ? "Impuesto incluido" : "Incluye impuesto") : ""}</p>
             </div>
           </section>
 
@@ -122,8 +122,8 @@ export default function PublicQuotePage() {
                   <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
                   <div className="mt-4 grid grid-cols-3 gap-2 text-sm">
                     <div><span className="label">Cant.</span><p>{item.quantity}</p></div>
-                    <div><span className="label">Precio</span><p>{formatCurrency(item.unitPrice)}</p></div>
-                    <div><span className="label">Total</span><p className="font-bold">{formatCurrency(item.quantity * item.unitPrice * (1 - item.discountRate))}</p></div>
+                    <div><span className="label">Precio</span><p>{formatCurrency(item.unitPrice, quote.currency)}</p></div>
+                    <div><span className="label">Total</span><p className="font-bold">{formatCurrency(item.lineTotal ?? item.quantity * item.unitPrice * (1 - item.discountRate), quote.currency)}</p></div>
                   </div>
                 </article>
               ))}
@@ -146,8 +146,8 @@ export default function PublicQuotePage() {
                         <p className="mt-1 text-muted-foreground">{item.description}</p>
                       </td>
                       <td className="py-4 text-center">{item.quantity}</td>
-                      <td className="py-4 text-right">{formatCurrency(item.unitPrice)}</td>
-                      <td className="py-4 text-right font-bold">{formatCurrency(item.quantity * item.unitPrice * (1 - item.discountRate))}</td>
+                      <td className="py-4 text-right">{formatCurrency(item.unitPrice, quote.currency)}</td>
+                      <td className="py-4 text-right font-bold">{formatCurrency(item.lineTotal ?? item.quantity * item.unitPrice * (1 - item.discountRate), quote.currency)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -155,10 +155,10 @@ export default function PublicQuotePage() {
             </div>
 
             <div className="ml-auto mt-6 max-w-sm space-y-2 text-sm">
-              <div className="flex justify-between"><span>Subtotal</span><strong>{formatCurrency(totals.subtotal)}</strong></div>
-              <div className="flex justify-between"><span>Descuentos</span><strong>-{formatCurrency(totals.discount)}</strong></div>
-              <div className="flex justify-between"><span>Impuestos</span><strong>{formatCurrency(totals.tax)}</strong></div>
-              <div className="flex justify-between border-t border-border pt-3 text-xl"><span>Total</span><strong>{formatCurrency(totals.total)}</strong></div>
+              <div className="flex justify-between"><span>Subtotal</span><strong>{formatCurrency(totals.subtotal, quote.currency)}</strong></div>
+              <div className="flex justify-between"><span>Descuentos</span><strong>-{formatCurrency(totals.discount, quote.currency)}</strong></div>
+              <div className="flex justify-between"><span>Impuestos</span><strong>{formatCurrency(totals.tax, quote.currency)}</strong></div>
+              <div className="flex justify-between border-t border-border pt-3 text-xl"><span>Total</span><strong>{formatCurrency(totals.total, quote.currency)}</strong></div>
             </div>
           </section>
 

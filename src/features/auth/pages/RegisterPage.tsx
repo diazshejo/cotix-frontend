@@ -34,7 +34,7 @@ function PendingVerification({ email }: { email: string }) {
             workspace.
           </p>
           <p className="mt-6 text-sm text-muted-foreground">¿No llegó el correo?</p>
-          <Button variant="outline" className="mt-2" loading={resend.isPending} onClick={() => resend.mutate()}>
+          <Button variant="secondary" className="mt-2" loading={resend.isPending} onClick={() => resend.mutate()}>
             Reenviar verificación
           </Button>
           <p className="mt-6 text-xs text-muted-foreground">

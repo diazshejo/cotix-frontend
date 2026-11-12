@@ -11,15 +11,10 @@ import {
   Palette,
   Package,
   ChevronDown,
-  Star,
   Users,
   Zap,
   Eye,
   Globe,
-  MessageCircle,
-  Mail,
-  Phone,
-  TrendingUp,
   Clock,
   Award,
 } from "lucide-react"
@@ -71,7 +66,7 @@ const steps = [
   {
     icon: Users,
     title: "Crea tu cuenta",
-    description: "Regístrate gratis en 30 segundos, sin tarjeta de crédito.",
+    description: "Regístrate gratis sin tarjeta de crédito.",
   },
   {
     icon: Package,
@@ -81,7 +76,7 @@ const steps = [
   {
     icon: Send,
     title: "Envía la cotización",
-    description: "Comparte por email, PDF o WhatsApp con un solo clic.",
+    description: "Envíala por email o copia el enlace público para compartirlo.",
   },
   {
     icon: CheckCircle2,
@@ -90,37 +85,10 @@ const steps = [
   },
 ]
 
-const testimonials = [
-  {
-    name: "Carlos Mendoza",
-    role: "Director Comercial",
-    company: "Importadora del Norte, S.A.",
-    quote:
-      "Antes tardábamos 3 horas preparando una cotización en Excel. Con Cotix lo hacemos en 15 minutos y el cliente puede aceptar desde el celular. Cerramos un 40% más de negocios el primer mes.",
-    stars: 5,
-  },
-  {
-    name: "María Fernanda Estrada",
-    role: "Gerente de Ventas",
-    company: "Grupo Logístico Centroamericano",
-    quote:
-      "El portal del cliente es lo que me enamoró. Mis clientes ya no me preguntan '¿me puedes reenviar la coti?' Todo está en línea, profesional y con nuestra marca.",
-    stars: 5,
-  },
-  {
-    name: "Roberto Xicará",
-    role: "Freelancer de Diseño Gráfico",
-    company: "Estudio RX Creativos",
-    quote:
-      "Soy diseñador, no contador. Cotix me dio una herramienta que me hace ver como una agencia grande ante mis clientes. Vale cada centavo del plan básico.",
-    stars: 5,
-  },
-]
-
 const faqs = [
   {
     q: "¿Necesito tarjeta de crédito para probar Cotix?",
-    a: "No. La prueba gratuita de 30 días está disponible sin ingresar ningún dato de pago. Solo necesitas un correo electrónico para empezar hoy mismo.",
+    a: "No. Puedes probar Cotix Básico durante 30 días sin ingresar datos de pago. Solo necesitas un correo electrónico para empezar.",
   },
   {
     q: "¿Puedo personalizar las cotizaciones con mi logo y colores?",
@@ -136,7 +104,7 @@ const faqs = [
   },
   {
     q: "¿Qué pasa si supero el límite de cotizaciones de mi plan?",
-    a: "Te avisaremos cuando estés cerca del límite. Podrás actualizar a Pro en cualquier momento con un solo clic. No te bloqueamos ni te cortamos el servicio de forma abrupta.",
+    a: "Te avisaremos cuando alcances el límite. Tus cotizaciones existentes seguirán disponibles; para crear más podrás cambiar a un plan superior.",
   },
 ]
 
@@ -153,7 +121,7 @@ export default function LandingPage() {
     if (meta) {
       meta.setAttribute(
         "content",
-        "Cotix es el cotizador en línea para empresas y freelancers de Guatemala. Crea propuestas profesionales, envíalas por WhatsApp o email y deja que tu cliente acepte online. Prueba gratis 30 días."
+        "Cotix es el cotizador en línea para empresas y freelancers de Guatemala. Crea propuestas profesionales, envíalas por email o comparte el enlace público y deja que tu cliente acepte online. Prueba gratis 30 días."
       )
     }
   }, [])
@@ -244,7 +212,7 @@ export default function LandingPage() {
               {/* Badge */}
               <div className="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-300/10 px-4 py-1.5 text-sm font-semibold text-cyan-200 backdrop-blur-sm">
                 <div className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" />
-                Prueba gratis 30 días · Sin tarjeta de crédito
+                Prueba Cotix Básico gratis 30 días · Sin tarjeta de crédito
               </div>
 
               <h1 className="text-4xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-6xl">
@@ -260,7 +228,7 @@ export default function LandingPage() {
 
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-slate-300">
                 El cotizador en línea para empresas que reemplaza el Excel y el Word. Crea propuestas
-                comerciales, envíalas por email o WhatsApp, y deja que tu cliente las acepte online sin
+                comerciales, envíalas por email o comparte el enlace, y deja que tu cliente las acepte online sin
                 crear cuenta. Con seguimiento comercial integrado.
               </p>
 
@@ -281,21 +249,6 @@ export default function LandingPage() {
                 </a>
               </div>
 
-              {/* Stats */}
-              <div className="mt-10 grid grid-cols-3 gap-4 border-t border-white/10 pt-8">
-                {[
-                  { value: "500+", label: "empresas activas" },
-                  { value: "10,000+", label: "cotizaciones enviadas" },
-                  { value: "98%", label: "tasa de entrega" },
-                ].map((stat) => (
-                  <div key={stat.label}>
-                    <p className="text-2xl font-extrabold bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent sm:text-3xl">
-                      {stat.value}
-                    </p>
-                    <p className="mt-0.5 text-xs text-slate-400 sm:text-sm">{stat.label}</p>
-                  </div>
-                ))}
-              </div>
             </div>
 
             {/* Right: Quote card mock */}
@@ -767,50 +720,9 @@ export default function LandingPage() {
             </div>
 
             <p className="mt-8 text-center text-sm text-slate-400">
-              Todos los planes incluyen <strong>30 días gratis</strong>. Sin tarjeta de crédito.
-              Cancela cuando quieras.
+              Comienza con <strong>30 días de prueba de Cotix Básico</strong>, sin tarjeta de crédito.
+              Después puedes elegir el plan que necesites.
             </p>
-          </div>
-        </section>
-
-        {/* ── TESTIMONIALS ────────────────────────────────────────────────────── */}
-        <section className="bg-slate-950 py-20">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-2xl text-center">
-              <p className="text-xs font-bold uppercase tracking-widest text-cyan-400">Testimonios</p>
-              <h2 className="mt-3 text-3xl font-extrabold text-white sm:text-4xl">
-                Empresas centroamericanas que ya confían en Cotix
-              </h2>
-            </div>
-
-            <div className="mt-12 grid gap-6 lg:grid-cols-3">
-              {testimonials.map((t) => (
-                <article
-                  key={t.name}
-                  className="rounded-2xl border border-white/10 bg-white/5 p-7 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-cyan-400/30 hover:shadow-[0_8px_30px_rgba(6,182,212,0.1)]"
-                >
-                  <div className="flex gap-0.5" aria-label={`${t.stars} estrellas de 5`}>
-                    {Array.from({ length: t.stars }).map((_, i) => (
-                      <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
-                    ))}
-                  </div>
-                  <blockquote className="mt-4 text-sm leading-relaxed text-slate-300">
-                    "{t.quote}"
-                  </blockquote>
-                  <div className="mt-6 flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-emerald-500 text-sm font-extrabold text-slate-950">
-                      {t.name.charAt(0)}
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-white">{t.name}</p>
-                      <p className="text-xs text-slate-500">
-                        {t.role} · {t.company}
-                      </p>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
           </div>
         </section>
 
@@ -913,7 +825,7 @@ export default function LandingPage() {
       {/* ── FOOTER ──────────────────────────────────────────────────────────── */}
       <footer className="border-t border-slate-800 bg-slate-950 py-14 text-slate-400">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-10 sm:grid-cols-2">
             {/* Brand */}
             <div>
               <Link to={routes.home} className="flex items-center gap-2.5 group" aria-label="Cotix inicio">
@@ -926,22 +838,6 @@ export default function LandingPage() {
                 El cotizador online para empresas y freelancers de Guatemala y Centroamérica. Propuestas
                 profesionales, portal de cliente y seguimiento comercial en un solo lugar.
               </p>
-              <div className="mt-5 flex gap-3">
-                <a
-                  href="#"
-                  aria-label="Cotix en Facebook"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-800 text-slate-500 transition hover:border-slate-600 hover:text-slate-300"
-                >
-                  <Globe className="h-4 w-4" />
-                </a>
-                <a
-                  href="#"
-                  aria-label="Contactar Cotix por WhatsApp"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-800 text-slate-500 transition hover:border-slate-600 hover:text-slate-300"
-                >
-                  <MessageCircle className="h-4 w-4" />
-                </a>
-              </div>
             </div>
 
             {/* Product */}
@@ -978,67 +874,6 @@ export default function LandingPage() {
               </ul>
             </div>
 
-            {/* Legal */}
-            <div>
-              <p className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-600">
-                Legal
-              </p>
-              <ul className="space-y-3 text-sm">
-                <li>
-                  <a href="#" className="transition hover:text-slate-200">
-                    Términos de servicio
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="transition hover:text-slate-200">
-                    Política de privacidad
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="transition hover:text-slate-200">
-                    Cookies
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="transition hover:text-slate-200">
-                    Acuerdo de datos (DPA)
-                  </a>
-                </li>
-              </ul>
-            </div>
-
-            {/* Contact */}
-            <div>
-              <p className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-600">
-                Contacto
-              </p>
-              <ul className="space-y-3 text-sm">
-                <li className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 shrink-0 text-slate-600" />
-                  <a href="mailto:hola@cotix.io" className="transition hover:text-slate-200">
-                    hola@cotix.io
-                  </a>
-                </li>
-                <li className="flex items-center gap-2">
-                  <MessageCircle className="h-4 w-4 shrink-0 text-slate-600" />
-                  <a href="#" className="transition hover:text-slate-200">
-                    WhatsApp soporte
-                  </a>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 shrink-0 text-slate-600" />
-                  <a href="tel:+50222000000" className="transition hover:text-slate-200">
-                    +502 2200-0000
-                  </a>
-                </li>
-                <li className="mt-2 flex items-start gap-2">
-                  <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                  <span className="text-xs text-slate-500">
-                    Soporte en español · Lun–Vie 8am–6pm (GT)
-                  </span>
-                </li>
-              </ul>
-            </div>
           </div>
 
           <div
@@ -1048,17 +883,6 @@ export default function LandingPage() {
 
           <div className="flex flex-col items-center justify-between gap-4 text-xs text-slate-600 sm:flex-row">
             <p>© 2026 Cotix. Todos los derechos reservados. Hecho con orgullo en Guatemala.</p>
-            <div className="flex gap-4">
-              <a href="#" className="transition hover:text-slate-400">
-                Términos
-              </a>
-              <a href="#" className="transition hover:text-slate-400">
-                Privacidad
-              </a>
-              <a href="#" className="transition hover:text-slate-400">
-                Estado del sistema
-              </a>
-            </div>
           </div>
         </div>
       </footer>
@@ -1075,7 +899,7 @@ export default function LandingPage() {
           "url": "https://cotix.io",
           "applicationCategory": "BusinessApplication",
           "operatingSystem": "Web",
-          "description": "Software de cotización digital para PYMEs, empresas y freelancers de Guatemala y Centroamérica. Crea propuestas profesionales, envíalas por email o WhatsApp y permite a tus clientes aceptarlas online.",
+          "description": "Software de cotización digital para PYMEs, empresas y freelancers de Guatemala y Centroamérica. Crea propuestas profesionales, envíalas por email o comparte el enlace y permite a tus clientes aceptarlas online.",
           "offers": [
             {
               "@type": "Offer",

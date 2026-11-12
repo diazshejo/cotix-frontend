@@ -1,10 +1,11 @@
-import { apiClient, withMockFallback } from "@/api/client"
+import { apiClient, credentialClient, withMockFallback } from "@/api/client"
 import { quotes } from "@/data/mock"
 import type { Quote, QuoteItem, QuoteStatus } from "@/types/quote"
 
 export interface QuoteListParams {
   search?: string
   status?: string
+  page?: number
 }
 
 export interface QuoteItemDto {
@@ -46,6 +47,8 @@ export interface QuoteDto {
   discount_total?: number | string
   taxable_base?: number | string
   total_tax?: number | string
+  tax_rate_snapshot?: number | string
+  prices_include_tax_snapshot?: boolean
   company_name?: string
   company_city?: string
   company_department?: string
@@ -82,11 +85,17 @@ function mapQuoteItem(dto: QuoteItemDto): QuoteItem {
   return {
     id: String(dto.id),
     name: dto.name ?? dto.description ?? "Item",
+    unit: dto.unit ?? "unidad",
+    taxable: dto.taxable ?? true,
+    discountType: dto.discount_type ?? "none",
+    discountValue: Number(dto.discount_value ?? 0),
+    discountAmount: Number(dto.discount_amount ?? 0),
+    lineTotal: dto.line_total == null ? undefined : Number(dto.line_total),
     description: dto.description ?? "",
     quantity: Number(dto.quantity),
     unitPrice: Number(dto.unit_price),
     discountRate,
-    taxRate: dto.taxable === false ? 0 : Number(dto.tax_rate ?? 0.12),
+    taxRate: dto.taxable === false ? 0 : Number(dto.tax_rate ?? 0),
   }
 }
 
@@ -107,6 +116,15 @@ function mapQuote(dto: QuoteDto): Quote {
     issueDate: dto.issue_date,
     validUntil: dto.expiry_date ?? dto.valid_until,
     total: Number(dto.total),
+    totals: dto.subtotal == null ? undefined : {
+      subtotal: Number(dto.subtotal),
+      discount: Number(dto.discount_total ?? 0),
+      taxableSubtotal: Number(dto.taxable_base ?? 0),
+      tax: Number(dto.total_tax ?? 0),
+      total: Number(dto.total),
+    },
+    taxRate: Number(dto.tax_rate_snapshot ?? 0),
+    pricesIncludeTax: dto.prices_include_tax_snapshot ?? false,
     currency: dto.currency,
     publicToken: dto.public_token,
     notes: dto.notes ?? "",
@@ -117,7 +135,10 @@ function mapQuote(dto: QuoteDto): Quote {
     companyLogoUrl: dto.company_logo_url ?? "",
     companyPrimaryColor: dto.company_primary_color ?? "",
     companyWebsite: dto.company_website ?? "",
-    items: (dto.items ?? []).map(mapQuoteItem),
+    items: (dto.items ?? []).map((item) => ({
+      ...mapQuoteItem(item),
+      taxRate: item.taxable === false ? 0 : Number(dto.tax_rate_snapshot ?? 0) / 100,
+    })),
   }
 }
 
@@ -132,13 +153,13 @@ function toQuotePayload(quote: Quote): QuotePayloadDto {
     terms_conditions: quote.termsConditions ?? "",
     items: quote.items.map((item) => ({
       catalog_item: null,
-      description: item.description || item.name,
+      description: item.name || item.description,
       quantity: item.quantity,
-      unit: "unidad",
+      unit: item.unit ?? "unidad",
       unit_price: item.unitPrice,
-      discount_type: item.discountRate > 0 ? "percent" : "none",
-      discount_value: item.discountRate * 100,
-      taxable: item.taxRate > 0,
+      discount_type: item.discountType === "fixed" ? "fixed" : item.discountRate > 0 ? "percent" : "none",
+      discount_value: item.discountType === "fixed" ? item.discountValue ?? 0 : item.discountRate * 100,
+      taxable: item.taxable ?? item.taxRate > 0,
     })),
   }
 }
@@ -146,8 +167,8 @@ function toQuotePayload(quote: Quote): QuotePayloadDto {
 export async function listQuotes(params: QuoteListParams = {}) {
   const response = apiClient
     .get<{ count: number; next: string | null; previous: string | null; results: QuoteDto[] }>("/quotes/", { params })
-    .then((res) => res.data.results.map(mapQuote))
-  return withMockFallback(response, quotes)
+    .then((res) => ({ ...res.data, results: res.data.results.map(mapQuote) }))
+  return withMockFallback(response, { count: quotes.length, next: null, previous: null, results: quotes })
 }
 
 export async function getQuote(id: string) {
@@ -157,12 +178,15 @@ export async function getQuote(id: string) {
 }
 
 export async function getPublicQuote(token: string) {
-  const response = apiClient.get<QuoteDto>(`/public/quotes/${token}/`).then((res) => mapQuote(res.data))
+  const response = credentialClient.get<QuoteDto>(`/public/quotes/${token}/`).then((res) => mapQuote(res.data))
   return withMockFallback(response, quotes[0])
 }
 
 export async function saveQuote(payload: Quote) {
-  const response = apiClient.post<QuoteDto>("/quotes/", toQuotePayload(payload)).then((res) => mapQuote(res.data))
+  const request = payload.id
+    ? apiClient.patch<QuoteDto>(`/quotes/${payload.id}/`, toQuotePayload(payload))
+    : apiClient.post<QuoteDto>("/quotes/", toQuotePayload(payload))
+  const response = request.then((res) => mapQuote(res.data))
   return withMockFallback(response, payload)
 }
 
@@ -171,18 +195,29 @@ export async function sendQuote(id: string) {
   return withMockFallback(response, { ...quotes[0], id, status: "sent" })
 }
 
+export async function publishQuote(id: string) {
+  const response = apiClient.post<QuoteDto>(`/quotes/${id}/publish/`).then((res) => mapQuote(res.data))
+  const fallback: Quote = { ...quotes[0], id, status: "sent" }
+  return withMockFallback(response, fallback)
+}
+
 export async function downloadQuotePdf(id: string) {
   const response = await apiClient.get<Blob>(`/quotes/${id}/pdf/`, { responseType: "blob" })
   return response.data
 }
 
+export async function downloadPublicQuotePdf(token: string) {
+  const response = await credentialClient.get<Blob>(`/public/quotes/${token}/pdf/`, { responseType: "blob" })
+  return response.data
+}
+
 export async function acceptPublicQuote(token: string) {
-  const response = apiClient.post<{ status: QuoteStatus }>(`/public/quotes/${token}/respond/`, { response: "accepted" }).then(() => getPublicQuote(token))
+  const response = credentialClient.post<{ status: QuoteStatus }>(`/public/quotes/${token}/respond/`, { response: "accepted" }).then(() => getPublicQuote(token))
   return withMockFallback(response, { ...quotes[0], status: "accepted" })
 }
 
 export async function rejectPublicQuote(token: string) {
-  const response = apiClient.post<{ status: QuoteStatus }>(`/public/quotes/${token}/respond/`, { response: "rejected" }).then(() => getPublicQuote(token))
+  const response = credentialClient.post<{ status: QuoteStatus }>(`/public/quotes/${token}/respond/`, { response: "rejected" }).then(() => getPublicQuote(token))
   return withMockFallback(response, { ...quotes[0], status: "rejected" })
 }
 

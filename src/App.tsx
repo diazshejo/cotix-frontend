@@ -63,6 +63,7 @@ const router = createBrowserRouter([
       { path: "quotes", element: <ProtectedRoute resource="quotes">{withSuspense(<QuotesListPage />)}</ProtectedRoute> },
       { path: "quotes/:id", element: <ProtectedRoute resource="quotes">{withSuspense(<QuoteDetailPage />)}</ProtectedRoute> },
       { path: "quotes/new", element: <ProtectedRoute resource="quoteBuilder">{withSuspense(<QuoteBuilderPage />)}</ProtectedRoute> },
+      { path: "quotes/:id/edit", element: <ProtectedRoute resource="quoteBuilder">{withSuspense(<QuoteBuilderPage />)}</ProtectedRoute> },
       { path: "clients", element: <ProtectedRoute resource="clients">{withSuspense(<ClientsListPage />)}</ProtectedRoute> },
       { path: "catalog/items", element: <ProtectedRoute resource="catalog">{withSuspense(<CatalogItemsPage />)}</ProtectedRoute> },
       { path: "catalog/categories", element: <ProtectedRoute resource="catalog">{withSuspense(<CatalogItemsPage />)}</ProtectedRoute> },

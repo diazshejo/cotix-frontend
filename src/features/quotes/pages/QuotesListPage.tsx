@@ -20,23 +20,17 @@ import { canPerform } from "@/utils/permissions"
 export default function QuotesListPage() {
   const [search, setSearch] = useState("")
   const [status, setStatus] = useState("")
+  const [page, setPage] = useState(1)
   const role = useAuthStore((state) => state.user?.role)
   const canCreate = canPerform(role, "create")
   const debouncedSearch = useDebounce(search)
-  const filters = useMemo(() => ({ search: debouncedSearch, status }), [debouncedSearch, status])
-  const { data = [], isLoading, isError, refetch } = useQuery({
+  const filters = useMemo(() => ({ search: debouncedSearch, status, page }), [debouncedSearch, status, page])
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.quotes(filters),
     queryFn: () => listQuotes(filters),
   })
 
-  const filteredQuotes = data.filter((quote) => {
-    const matchesStatus = status ? quote.status === status : true
-    const term = debouncedSearch.toLowerCase()
-    const matchesSearch = term
-      ? `${quote.number} ${quote.clientName} ${quote.clientEmail}`.toLowerCase().includes(term)
-      : true
-    return matchesStatus && matchesSearch
-  })
+  const filteredQuotes = data?.results ?? []
 
   return (
     <div className="space-y-5 pb-20 sm:pb-0">
@@ -65,10 +59,10 @@ export default function QuotesListPage() {
                 className="w-full border-0 bg-transparent text-sm outline-none"
                 placeholder="Buscar por cliente, numero o email"
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => { setSearch(event.target.value); setPage(1) }}
               />
             </div>
-            <select className="field md:w-48" value={status} onChange={(event) => setStatus(event.target.value)}>
+            <select className="field md:w-48" value={status} onChange={(event) => { setStatus(event.target.value); setPage(1) }}>
               <option value="">Todos los estados</option>
               <option value="draft">Borrador</option>
               <option value="sent">Enviada</option>
@@ -76,7 +70,7 @@ export default function QuotesListPage() {
               <option value="accepted">Aceptada</option>
               <option value="rejected">Rechazada</option>
             </select>
-            <Button variant="secondary" onClick={() => { setSearch(""); setStatus("") }}>
+            <Button variant="secondary" onClick={() => { setSearch(""); setStatus(""); setPage(1) }}>
               <Filter className="h-4 w-4" />
               Limpiar
             </Button>
@@ -152,6 +146,15 @@ export default function QuotesListPage() {
           ) : null}
         </CardContent>
       </Card>
+      {!isLoading && !isError && data && (data.previous || data.next) ? (
+        <nav className="flex items-center justify-between gap-3" aria-label="Páginas de cotizaciones">
+          <p className="text-sm text-muted-foreground">Página {page} · {data.count} cotizaciones</p>
+          <div className="flex gap-2">
+            <Button variant="secondary" disabled={!data.previous} onClick={() => setPage((value) => value - 1)}>Anterior</Button>
+            <Button variant="secondary" disabled={!data.next} onClick={() => setPage((value) => value + 1)}>Siguiente</Button>
+          </div>
+        </nav>
+      ) : null}
       {canCreate ? <MobileFab icon={Plus} label="Nueva" to={routes.newQuote} /> : null}
     </div>
   )

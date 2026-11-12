@@ -1,6 +1,7 @@
 import type { Quote } from "@/types/quote"
 
 export interface DashboardMetrics {
+  currency: "GTQ" | "USD"
   totalQuoted: number
   totalAccepted: number
   conversionRate: number

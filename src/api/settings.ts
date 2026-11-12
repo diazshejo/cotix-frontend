@@ -18,6 +18,7 @@ export interface CompanySettingsDto {
   default_currency: "GTQ" | "USD"
   tax_label: string
   tax_rate: number | string
+  prices_include_tax: boolean
   quote_prefix: string
   quote_digits: number
   default_footer_text: string
@@ -41,6 +42,7 @@ function mapSettings(dto: CompanySettingsDto): CompanySettings {
     defaultCurrency: dto.default_currency,
     taxLabel: dto.tax_label,
     taxRate: Number(dto.tax_rate),
+    pricesIncludeTax: dto.prices_include_tax,
     quotePrefix: dto.quote_prefix,
     quoteDigits: dto.quote_digits,
     footerText: dto.default_footer_text,
@@ -64,6 +66,7 @@ function toSettingsDto(settings: CompanySettings): CompanySettingsDto {
     default_currency: settings.defaultCurrency,
     tax_label: settings.taxLabel,
     tax_rate: settings.taxRate,
+    prices_include_tax: settings.pricesIncludeTax,
     quote_prefix: settings.quotePrefix,
     quote_digits: settings.quoteDigits,
     default_footer_text: settings.footerText,
